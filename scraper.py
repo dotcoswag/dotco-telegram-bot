@@ -200,7 +200,12 @@ def negocio_a_fila(negocio, localidad, categoria, provincia):
     emails_extra = " | ".join(emails_lista)
 
     return {
-        "business_id": negocio.get("business_id", ""),
+        # Fall back to place_id when business_id is missing so the dedup key
+        # written to the CSV matches what scrape_combinacion uses in seen_ids
+        # (it does the same fallback). Without this, rows that came in only
+        # with a place_id end up with empty business_id and can't be matched
+        # back when the master DB is reloaded.
+        "business_id": negocio.get("business_id") or negocio.get("place_id", ""),
         "nombre": negocio.get("name", ""),
         "tipo": negocio.get("type", ""),
         "subtipo": subtipo_str,
@@ -257,7 +262,13 @@ def guardar_en_csv_filas(filas, archivo_csv):
             writer.writerow(fila)
 
 
-def scrape_combinacion(localidad, categoria, provincia, archivo_csv, seen_ids, limite_total, min_score=0, cancel_event=None):
+def scrape_combinacion(localidad, categoria, provincia, archivo_csv, seen_ids, limite_total, min_score=0, cancel_event=None, on_new_rows=None):
+    """Scrape one (localidad, categoria, provincia) combo.
+
+    on_new_rows: optional callable invoked with the list of newly-written row
+    dicts after each page is appended. Used by the bot to mirror writes into
+    the centralized leads DB (bot.leads_db). main.py (CLI) passes None.
+    """
     query = f"{categoria} in {localidad}, {provincia}"
     offset = 0
     total_nuevos = 0
@@ -294,6 +305,12 @@ def scrape_combinacion(localidad, categoria, provincia, archivo_csv, seen_ids, l
         if nuevos:
             guardar_en_csv_filas(nuevos, archivo_csv)
             total_nuevos += len(nuevos)
+            if on_new_rows is not None:
+                try:
+                    on_new_rows(nuevos)
+                except Exception as e:
+                    # Mirror failure must never break the scrape itself.
+                    print(f"      ⚠️  on_new_rows hook failed: {e}", flush=True)
 
         if len(negocios) < LIMIT_POR_LLAMADA:
             break

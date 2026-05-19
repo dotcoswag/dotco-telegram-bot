@@ -21,3 +21,7 @@ services:
         sync: false
       - key: WEBHOOK_SECRET_TOKEN
         generateValue: true
+      - key: GITHUB_PAT
+        sync: false
+      - key: GITHUB_LEADS_REPO
+        value: dotcoswag/dotco-leads-db

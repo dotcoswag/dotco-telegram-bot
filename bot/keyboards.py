@@ -83,6 +83,58 @@ def yes_no_keyboard(prefix: str, default_no: bool = True) -> InlineKeyboardMarku
     return InlineKeyboardMarkup([[no, yes]])
 
 
+def confirm_keyboard(has_fresh_combos: bool) -> InlineKeyboardMarkup:
+    """Final confirm step for /scrape. When there are fresh combos in the master
+    DB, offer to skip them (recommended) or run all. When none, single-button run.
+    Always offers a Cancel."""
+    if has_fresh_combos:
+        rows = [
+            [InlineKeyboardButton("✓ Skip fresh (recommended)",
+                                  callback_data="confirm|skip_fresh")],
+            [InlineKeyboardButton("⚠ Run all (re-scrape fresh too)",
+                                  callback_data="confirm|run_all")],
+            [InlineKeyboardButton("✖ Cancel", callback_data="cancel|")],
+        ]
+    else:
+        rows = [
+            [InlineKeyboardButton("▶ Run", callback_data="confirm|skip_fresh")],
+            [InlineKeyboardButton("✖ Cancel", callback_data="cancel|")],
+        ]
+    return InlineKeyboardMarkup(rows)
+
+
+def state_picker_keyboard(prefix: str = "dbstate", include_all: bool = True) -> InlineKeyboardMarkup:
+    """State picker for /db_export and /db_export_smartlead. Uses `prefix|N`
+    where N is the state index, or `prefix|all` for the All-states option."""
+    rows = []
+    if include_all:
+        rows.append([InlineKeyboardButton("🌐 All states", callback_data=f"{prefix}|all")])
+    cols = 3
+    for i in range(0, len(cities.STATES), cols):
+        row = []
+        for j in range(cols):
+            if i + j >= len(cities.STATES):
+                break
+            row.append(InlineKeyboardButton(
+                cities.state_name(i + j),
+                callback_data=f"{prefix}|{i + j}",
+            ))
+        rows.append(row)
+    rows.append([InlineKeyboardButton("✖ Cancel", callback_data="cancel|")])
+    return InlineKeyboardMarkup(rows)
+
+
+def group_picker_keyboard(prefix: str = "dbgrp", include_all: bool = True) -> InlineKeyboardMarkup:
+    """Single-select group picker for /db_export filters."""
+    rows = []
+    if include_all:
+        rows.append([InlineKeyboardButton("🌐 All groups", callback_data=f"{prefix}|all")])
+    for i, label in enumerate(CATEGORY_KEYS):
+        rows.append([InlineKeyboardButton(label, callback_data=f"{prefix}|{i}")])
+    rows.append([InlineKeyboardButton("✖ Cancel", callback_data="cancel|")])
+    return InlineKeyboardMarkup(rows)
+
+
 FEATURE_KEYS = ("first_name", "opener", "qualify")
 
 

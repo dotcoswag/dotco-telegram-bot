@@ -7,8 +7,21 @@ with a fake ProgressBridge and a real threading.Event for cancellation.
 import threading
 from unittest.mock import MagicMock, patch
 
-from bot import scrape_runner
+import pytest
+
+from bot import github_storage, leads_db, scrape_runner
 from scraper import QuotaExhausted
+
+
+@pytest.fixture(autouse=True)
+def reset_db_state():
+    """Each test gets an empty master + scrape_log to avoid cross-test pollution
+    from record_scrape() calls inside scrape_runner.run."""
+    github_storage._mem_reset_for_tests()
+    leads_db._reset_for_tests()
+    yield
+    github_storage._mem_reset_for_tests()
+    leads_db._reset_for_tests()
 
 
 class FakeBridge:

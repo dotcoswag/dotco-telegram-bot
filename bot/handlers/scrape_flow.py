@@ -17,7 +17,8 @@ from telegram.ext import (
 
 import main as scraper_main
 
-from bot import api_quota, cities, config, keyboards
+from bot import api_quota, cities, config, keyboards, leads_db
+from bot.github_storage import StorageError
 from bot.job_manager import jobs
 from bot.progress import ProgressBridge
 from bot import scrape_runner
@@ -273,6 +274,25 @@ async def cb_min_score(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
         max_cost = min(max_cost, limite)
         typical_high = min(typical_high, limite)
 
+    # Compute fresh-combo count against the master DB so we can offer to skip.
+    all_combos = [
+        (loc, prov, cat)
+        for (loc, prov) in context.user_data["localidades"]
+        for cat in context.user_data["categorias"]
+    ]
+    try:
+        await loop.run_in_executor(None, leads_db.ensure_loaded)
+        fresh_count = await loop.run_in_executor(
+            None, leads_db.fresh_count, all_combos, config.COMBO_FRESH_DAYS
+        )
+        master_size = len(leads_db.MASTER)
+    except StorageError as e:
+        fresh_count = 0
+        master_size = 0
+        master_warning = f"\n⚠️ Master DB unreachable ({e}) — cross-scrape dedup disabled."
+    else:
+        master_warning = ""
+
     summary = (
         f"Confirm run:\n"
         f"  Tier: {context.user_data['tier_label']}\n"
@@ -286,7 +306,12 @@ async def cb_min_score(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
         f"📊 {api_quota.summary_line(quota)}\n"
         f"Estimated cost: ~{typical_low:,}–{typical_high:,} businesses "
         f"(hard cap {max_cost:,}).\n"
+        f"\n"
+        f"🗄️ Master DB: {master_size:,} known businesses · "
+        f"{fresh_count}/{total_combos} combos scraped in last "
+        f"{config.COMBO_FRESH_DAYS}d"
     )
+    summary += master_warning
     if quota is not None and quota["remaining"] <= 0:
         summary += (
             f"\n⚠️ Quota is already exhausted — the scrape will abort on the first "
@@ -300,7 +325,7 @@ async def cb_min_score(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
         )
     await q.edit_message_text(
         summary,
-        reply_markup=keyboards.yes_no_keyboard("confirm", default_no=False),
+        reply_markup=keyboards.confirm_keyboard(fresh_count > 0),
     )
     return CONFIRM
 
@@ -311,9 +336,10 @@ async def cb_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     q = update.callback_query
     await q.answer()
     _, value = q.data.split("|", 1)
-    if value != "yes":
+    if value not in ("skip_fresh", "run_all"):
         await q.edit_message_text("Cancelled.")
         return ConversationHandler.END
+    skip_fresh = (value == "skip_fresh")
 
     chat_id = q.message.chat_id
     job = await jobs.try_acquire(chat_id, "scrape")
@@ -323,7 +349,10 @@ async def cb_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         )
         return ConversationHandler.END
 
-    await q.edit_message_text("▶️ Scrape started. You'll get progress here. /cancel to stop.")
+    mode_label = "skip fresh combos" if skip_fresh else "run all combos"
+    await q.edit_message_text(
+        f"▶️ Scrape started ({mode_label}). Progress will stream here. /cancel to stop."
+    )
 
     localidades = list(context.user_data["localidades"])
     categorias = list(context.user_data["categorias"])
@@ -336,13 +365,15 @@ async def cb_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     try:
         result = await loop.run_in_executor(
             None,
-            scrape_runner.run,
-            localidades,
-            categorias,
-            limite,
-            min_score,
-            bridge,
-            job.cancel_event,
+            lambda: scrape_runner.run(
+                localidades,
+                categorias,
+                limite,
+                min_score,
+                bridge,
+                job.cancel_event,
+                skip_fresh,
+            ),
         )
     except Exception as e:
         await context.bot.send_message(chat_id, f"❌ Scrape failed: {e}")
@@ -357,11 +388,17 @@ async def cb_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     status_emoji = "🛑" if cancelled else "✅"
     summary = (
         f"{status_emoji} {'Cancelled' if cancelled else 'Done'} — "
-        f"{rows:,} leads in {elapsed//60}m {elapsed%60}s.\n"
-        f"  new: {result['total_nuevos']}, "
-        f"dup: {result['total_duplicados']}, "
-        f"low-score skip: {result['total_skipped_score']}"
+        f"{rows:,} new leads this run in {elapsed//60}m {elapsed%60}s.\n"
+        f"  combos run: {result['combos_done']}/{result['combos_total']} "
+        f"(skipped fresh: {result.get('combos_skipped_fresh', 0)})\n"
+        f"  master before: {result.get('master_primed', 0):,} → after: "
+        f"{len(leads_db.MASTER):,}\n"
+        f"  detail: new {result['total_nuevos']}, "
+        f"dup {result['total_duplicados']}, "
+        f"low-score skip {result['total_skipped_score']}"
     )
+    if result.get("flush_error"):
+        summary += f"\n⚠️ Master flush failed: {result['flush_error']} (data kept in memory)"
     # Re-fetch quota to show actual delta consumed by this scrape.
     quota_after = await loop.run_in_executor(None, api_quota.fetch)
     quota_before = context.user_data.get("quota_before")

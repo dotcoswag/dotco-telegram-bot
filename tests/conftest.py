@@ -10,6 +10,10 @@ os.environ.setdefault("WEBHOOK_BASE_URL", "https://test.example.com")
 os.environ.setdefault("WEBHOOK_SECRET_TOKEN", "test_secret")
 os.environ.setdefault("PORT", "10000")
 os.environ.setdefault("RAPIDAPI_KEY", "test_key_not_real")
+# Force github_storage into in-memory mode for all tests.
+os.environ.setdefault("LEADS_DB_BACKEND", "memory")
+os.environ.setdefault("GITHUB_LEADS_REPO", "test/repo")
+os.environ.setdefault("GITHUB_PAT", "test_pat")
 
 # Ensure project root is on sys.path so `import bot.*` and `import scraper` work
 # when pytest is invoked from anywhere.
