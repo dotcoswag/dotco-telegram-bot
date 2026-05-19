@@ -9,6 +9,7 @@ Usage:
 
 import logging
 
+from telegram import BotCommand
 from telegram.ext import Application
 
 from bot import config
@@ -16,8 +17,42 @@ from bot.handlers import enrich as enrich_handler
 from bot.handlers import db_cmds, export_cmds, job_control, quota_status, scrape_flow, start_help
 
 
+# Commands shown in Telegram's native "/" menu (tap the / icon next to the input).
+# Order matters — they're displayed in this order, so put the things you'll
+# actually run on top.
+BOT_COMMANDS: list[tuple[str, str]] = [
+    ("scrape",              "🔎 Run a new lead scrape (with quota + fresh-skip preview)"),
+    ("db_stats",            "🗄️ Master DB totals — by state, category, score"),
+    ("db_export",           "📤 Export a filtered subset of the master DB → CSV"),
+    ("db_export_smartlead", "📧 Same filters → Smartlead-format CSV"),
+    ("db_pull",             "🔄 Force re-fetch master DB from GitHub"),
+    ("list",                "📂 List recent result files on the server"),
+    ("export_smartlead",    "📧 Smartlead CSV from the last scrape"),
+    ("export_excel",        "📊 XLSX from the last scrape"),
+    ("enrich",              "🤖 AI-enrich the last CSV (opt-in, cost preview)"),
+    ("status",              "⏱  Show the running job"),
+    ("cancel",              "🛑 Cancel the running job"),
+    ("quota",               "📊 Live status: RapidAPI · Anthropic · Telegram"),
+    ("demo",                "🧪 Seed a synthetic CSV to test exports (no quota cost)"),
+    ("help",                "❓ Show full command list"),
+    ("start",               "👋 Welcome message"),
+]
+
+
+async def _post_init(app: Application) -> None:
+    """Register the Telegram-native command menu (the `/` button)."""
+    await app.bot.set_my_commands(
+        [BotCommand(name, desc) for name, desc in BOT_COMMANDS]
+    )
+
+
 def build_application() -> Application:
-    app = Application.builder().token(config.TELEGRAM_BOT_TOKEN).build()
+    app = (
+        Application.builder()
+        .token(config.TELEGRAM_BOT_TOKEN)
+        .post_init(_post_init)
+        .build()
+    )
     # Order matters: ConversationHandler (scrape_flow) routes its own callbacks
     # first when a user is mid-conversation; otherwise the global handlers below
     # match by their `score|`/`slscore|`/`feat|`/... patterns.
