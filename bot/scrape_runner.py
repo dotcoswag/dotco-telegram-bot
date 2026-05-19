@@ -14,7 +14,7 @@ from datetime import datetime
 from typing import Optional
 
 import main as scraper_main
-from scraper import scrape_combinacion
+from scraper import scrape_combinacion, QuotaExhausted
 
 from bot.progress import ProgressBridge
 
@@ -65,6 +65,16 @@ def run(
                 limite_total=limite,
                 min_score=min_score,
             )
+        except QuotaExhausted as e:
+            bridge.push(
+                f"🛑 RapidAPI quota exhausted — aborting scrape.\n"
+                f"  {e}\n"
+                f"  Check / upgrade plan: "
+                f"https://rapidapi.com/letscrape-6bRBa3QguO5/api/local-business-data",
+                force=True,
+            )
+            cancelled = True
+            break
         except Exception as e:
             bridge.push(f"⚠️ Error on {loc}/{cat}: {e}", force=True)
             continue

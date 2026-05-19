@@ -26,6 +26,14 @@ DELAY_SEGUNDOS = 1
 PAGINATION_PARAM = "offset"
 # ─────────────────────────────────────────────────────────────
 
+
+class QuotaExhausted(Exception):
+    """Raised when RapidAPI returns a permanent quota-exceeded error (non-retryable).
+
+    Distinguishable from transient 429 rate-limits, which the caller retries.
+    Callers should stop the entire scrape job — retrying won't help.
+    """
+
 COLUMNAS_CSV = [
     # Identity
     "business_id",
@@ -112,13 +120,22 @@ def llamar_api(query, limit, pagina_offset, max_retries=3):
 
             # Handle rate limiting
             if resp.status_code == 429:
+                quota_msg = ""
+                try:
+                    quota_msg = (resp.json().get("message") or "")
+                except (ValueError, AttributeError):
+                    pass
+                qm = quota_msg.lower()
+                if "exceeded" in qm and ("quota" in qm or "plan" in qm):
+                    # Permanent quota error — don't retry, abort the entire scrape.
+                    raise QuotaExhausted(quota_msg)
                 wait_time = int(resp.headers.get("Retry-After", 30))
                 if attempt < max_retries:
-                    print(f"      ⏳ Rate limited (429). Waiting {wait_time}s before retry...")
+                    print(f"      ⏳ Rate limited (429). Waiting {wait_time}s before retry...", flush=True)
                     time.sleep(wait_time)
                     continue
                 else:
-                    print(f"      ⚠️  Rate limited after {max_retries} retries. Skipping.")
+                    print(f"      ⚠️  Rate limited after {max_retries} retries. Skipping.", flush=True)
                     return []
 
             resp.raise_for_status()
