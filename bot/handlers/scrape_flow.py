@@ -86,11 +86,15 @@ async def cb_tier(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         return ConversationHandler.END
     context.user_data["tier_label"] = tier_label
     context.user_data["localidades"] = scraper_main.MERCADOS_RECOMENDADOS[tier_label]
+    context.user_data["category_back_target"] = "tier"
     await q.edit_message_text(
         f"Tier: {tier_label}\n"
         f"Cities: {len(context.user_data['localidades'])}\n\n"
         f"Step 2/4 — pick category groups (multi-select):",
-        reply_markup=keyboards.category_keyboard(set()),
+        reply_markup=keyboards.category_keyboard(
+            context.user_data.get("selected_categories", set()),
+            back_target="tier",
+        ),
     )
     return CHOOSING_CATEGORIES
 
@@ -172,13 +176,16 @@ async def _finalize_cities(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         return PICKING_STATE
     localidades = [cities.city_at(si, ci) for (si, ci) in sorted(selected_keys)]
     context.user_data["localidades"] = localidades
-    context.user_data["selected_categories"] = set()
+    context.user_data.setdefault("selected_categories", set())
+    context.user_data["category_back_target"] = "state"
     preview = ", ".join(f"{n} ({s})" for n, s in localidades[:5])
     more = f" … +{len(localidades) - 5} more" if len(localidades) > 5 else ""
     await q.edit_message_text(
         f"✓ {len(localidades)} cities: {preview}{more}\n\n"
         f"Step 2/4 — pick category groups (multi-select):",
-        reply_markup=keyboards.category_keyboard(set()),
+        reply_markup=keyboards.category_keyboard(
+            context.user_data["selected_categories"], back_target="state"
+        ),
     )
     return CHOOSING_CATEGORIES
 
@@ -198,7 +205,10 @@ async def cb_cat_toggle(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
         selected.remove(idx)
     else:
         selected.add(idx)
-    await q.edit_message_reply_markup(reply_markup=keyboards.category_keyboard(selected))
+    back_target = context.user_data.get("category_back_target", "tier")
+    await q.edit_message_reply_markup(
+        reply_markup=keyboards.category_keyboard(selected, back_target=back_target)
+    )
     return CHOOSING_CATEGORIES
 
 
@@ -220,7 +230,8 @@ async def cb_cat_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
     await q.edit_message_text(
         f"Groups: {len(chosen_labels)} → {len(flat)} queries per city\n\n"
         f"Step 3/4 — reply with a max-leads number (e.g. 100), "
-        f"or send `0` for unlimited."
+        f"or send `0` for unlimited.",
+        reply_markup=keyboards.back_only_keyboard("categories"),
     )
     return ASKING_LIMIT
 
@@ -239,7 +250,7 @@ async def msg_limit(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     context.user_data["limite"] = None if n == 0 else n
     await update.message.reply_text(
         "Step 4/4 — pick a minimum lead_score (0–7):",
-        reply_markup=keyboards.min_score_keyboard(),
+        reply_markup=keyboards.min_score_keyboard(back_target="limit"),
     )
     return ASKING_MIN_SCORE
 
@@ -430,6 +441,65 @@ async def cb_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     return ConversationHandler.END
 
 
+# ── back-navigation handlers ─────────────────────────────────
+
+async def cb_back(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Routes `back|<target>` callbacks back to a previous wizard state.
+
+    Each transition re-displays that step's keyboard with any previously-saved
+    selections so the user doesn't have to re-pick what they already had.
+    """
+    q = update.callback_query
+    await q.answer()
+    _, target = q.data.split("|", 1)
+
+    if target == "tier":
+        await q.edit_message_text(
+            "Step 1/4 — pick a market tier:",
+            reply_markup=keyboards.tier_keyboard(),
+        )
+        return CHOOSING_TIER
+
+    if target == "state":
+        selected_total = len(context.user_data.get("selected_city_keys", set()))
+        await q.edit_message_text(
+            f"Selected so far: {selected_total} cities\n\n"
+            f"Pick another state or tap ✔ Done.",
+            reply_markup=keyboards.state_keyboard(),
+        )
+        return PICKING_STATE
+
+    if target == "categories":
+        selected = context.user_data.get("selected_categories", set())
+        back_target = context.user_data.get("category_back_target", "tier")
+        await q.edit_message_text(
+            "Step 2/4 — pick category groups (multi-select):",
+            reply_markup=keyboards.category_keyboard(selected, back_target=back_target),
+        )
+        return CHOOSING_CATEGORIES
+
+    if target == "limit":
+        limite = context.user_data.get("limite")
+        current = "unlimited (0)" if limite is None else str(limite)
+        await q.edit_message_text(
+            f"Step 3/4 — reply with a max-leads number (e.g. 100), or send `0` for unlimited.\n"
+            f"(current: {current})",
+            reply_markup=keyboards.back_only_keyboard("categories"),
+        )
+        return ASKING_LIMIT
+
+    if target == "min_score":
+        await q.edit_message_text(
+            "Step 4/4 — pick a minimum lead_score (0–7):",
+            reply_markup=keyboards.min_score_keyboard(back_target="limit"),
+        )
+        return ASKING_MIN_SCORE
+
+    # Unknown target — fall back to cancel for safety.
+    await q.edit_message_text("Wizard reset.")
+    return ConversationHandler.END
+
+
 # ── shared cancel ────────────────────────────────────────────
 
 async def cb_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -457,6 +527,7 @@ def register(application) -> None:
             PICKING_STATE: [
                 CallbackQueryHandler(cb_pick_state, pattern=r"^state\|"),
                 CallbackQueryHandler(cb_cities_done_from_states, pattern=r"^cities_done\|"),
+                CallbackQueryHandler(cb_back, pattern=r"^back\|"),
                 CallbackQueryHandler(cb_cancel, pattern=r"^cancel\|"),
             ],
             PICKING_CITIES_IN_STATE: [
@@ -468,17 +539,22 @@ def register(application) -> None:
             CHOOSING_CATEGORIES: [
                 CallbackQueryHandler(cb_cat_toggle, pattern=r"^cat\|"),
                 CallbackQueryHandler(cb_cat_done, pattern=r"^cat_done\|"),
+                CallbackQueryHandler(cb_back, pattern=r"^back\|"),
                 CallbackQueryHandler(cb_cancel, pattern=r"^cancel\|"),
             ],
             ASKING_LIMIT: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, msg_limit),
+                CallbackQueryHandler(cb_back, pattern=r"^back\|"),
+                CallbackQueryHandler(cb_cancel, pattern=r"^cancel\|"),
             ],
             ASKING_MIN_SCORE: [
                 CallbackQueryHandler(cb_min_score, pattern=r"^score\|"),
+                CallbackQueryHandler(cb_back, pattern=r"^back\|"),
                 CallbackQueryHandler(cb_cancel, pattern=r"^cancel\|"),
             ],
             CONFIRM: [
                 CallbackQueryHandler(cb_confirm, pattern=r"^confirm\|"),
+                CallbackQueryHandler(cb_back, pattern=r"^back\|"),
                 CallbackQueryHandler(cb_cancel, pattern=r"^cancel\|"),
             ],
         },

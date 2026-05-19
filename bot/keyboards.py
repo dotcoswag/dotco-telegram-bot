@@ -22,7 +22,7 @@ def tier_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(rows)
 
 
-def state_keyboard() -> InlineKeyboardMarkup:
+def state_keyboard(include_back: bool = True) -> InlineKeyboardMarkup:
     """3-column grid of US states + DC. Indices map to bot.cities.STATES."""
     rows = []
     cols = 3
@@ -36,10 +36,12 @@ def state_keyboard() -> InlineKeyboardMarkup:
                 callback_data=f"state|{i + j}",
             ))
         rows.append(row)
-    rows.append([
-        InlineKeyboardButton("✔ Done picking cities", callback_data="cities_done|"),
-        InlineKeyboardButton("✖ Cancel", callback_data="cancel|"),
-    ])
+    footer = []
+    if include_back:
+        footer.append(InlineKeyboardButton("← Back to tier", callback_data="back|tier"))
+    footer.append(InlineKeyboardButton("✔ Done picking cities", callback_data="cities_done|"))
+    footer.append(InlineKeyboardButton("✖ Cancel", callback_data="cancel|"))
+    rows.append(footer)
     return InlineKeyboardMarkup(rows)
 
 
@@ -57,22 +59,37 @@ def city_keyboard(state_idx: int, selected_in_state: set[int]) -> InlineKeyboard
     return InlineKeyboardMarkup(rows)
 
 
-def category_keyboard(selected: set[int]) -> InlineKeyboardMarkup:
+def category_keyboard(selected: set[int], back_target: str = "tier") -> InlineKeyboardMarkup:
+    """back_target controls where the ← Back button takes the user.
+    `tier` for the preset-tier flow, `cities` for the custom-cities flow."""
     rows = []
     for i, label in enumerate(CATEGORY_KEYS):
         mark = "✅ " if i in selected else "▫️ "
         rows.append([InlineKeyboardButton(f"{mark}{label}", callback_data=f"cat|{i}")])
     rows.append([
+        InlineKeyboardButton(f"← Back", callback_data=f"back|{back_target}"),
         InlineKeyboardButton("✔ Done", callback_data="cat_done|"),
         InlineKeyboardButton("✖ Cancel", callback_data="cancel|"),
     ])
     return InlineKeyboardMarkup(rows)
 
 
-def min_score_keyboard(prefix: str = "score") -> InlineKeyboardMarkup:
+def back_only_keyboard(target: str) -> InlineKeyboardMarkup:
+    """For text-input steps (e.g. ASKING_LIMIT) — gives the user a way out."""
+    return InlineKeyboardMarkup([[
+        InlineKeyboardButton("← Back", callback_data=f"back|{target}"),
+        InlineKeyboardButton("✖ Cancel", callback_data="cancel|"),
+    ]])
+
+
+def min_score_keyboard(prefix: str = "score", back_target: str | None = None) -> InlineKeyboardMarkup:
     rows = [[InlineKeyboardButton(str(n), callback_data=f"{prefix}|{n}") for n in range(0, 4)],
-            [InlineKeyboardButton(str(n), callback_data=f"{prefix}|{n}") for n in range(4, 8)],
-            [InlineKeyboardButton("✖ Cancel", callback_data="cancel|")]]
+            [InlineKeyboardButton(str(n), callback_data=f"{prefix}|{n}") for n in range(4, 8)]]
+    footer = []
+    if back_target:
+        footer.append(InlineKeyboardButton("← Back", callback_data=f"back|{back_target}"))
+    footer.append(InlineKeyboardButton("✖ Cancel", callback_data="cancel|"))
+    rows.append(footer)
     return InlineKeyboardMarkup(rows)
 
 
@@ -93,13 +110,13 @@ def confirm_keyboard(has_fresh_combos: bool) -> InlineKeyboardMarkup:
                                   callback_data="confirm|skip_fresh")],
             [InlineKeyboardButton("⚠ Run all (re-scrape fresh too)",
                                   callback_data="confirm|run_all")],
-            [InlineKeyboardButton("✖ Cancel", callback_data="cancel|")],
         ]
     else:
-        rows = [
-            [InlineKeyboardButton("▶ Run", callback_data="confirm|skip_fresh")],
-            [InlineKeyboardButton("✖ Cancel", callback_data="cancel|")],
-        ]
+        rows = [[InlineKeyboardButton("▶ Run", callback_data="confirm|skip_fresh")]]
+    rows.append([
+        InlineKeyboardButton("← Back", callback_data="back|min_score"),
+        InlineKeyboardButton("✖ Cancel", callback_data="cancel|"),
+    ])
     return InlineKeyboardMarkup(rows)
 
 
