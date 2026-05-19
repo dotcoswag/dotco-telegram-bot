@@ -153,6 +153,10 @@ def llamar_api(query, limit, pagina_offset, max_retries=3, cancel_event=None):
             data = resp.json()
             return data.get("data", [])
 
+        except QuotaExhausted:
+            # Permanent quota error — must propagate; the generic `except Exception`
+            # below would otherwise swallow it as a "network error".
+            raise
         except requests.exceptions.HTTPError as e:
             if attempt < max_retries:
                 wait_time = 2 ** attempt

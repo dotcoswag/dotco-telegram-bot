@@ -14,6 +14,8 @@ WELCOME = (
     "  /list — list result files on the server\n"
     "  /status — show the running job\n"
     "  /cancel — request cancellation of the running job\n"
+    "  /quota — live quota for RapidAPI + Anthropic + Telegram status\n"
+    "  /demo — seed a synthetic CSV so /export_* can be tested without API\n"
     "  /help — show this message\n\n"
     "ℹ️ First message after ~15 min idle may take 30–60s — Render free tier "
     "puts the service to sleep when inactive."

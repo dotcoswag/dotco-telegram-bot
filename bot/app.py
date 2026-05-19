@@ -13,7 +13,7 @@ from telegram.ext import Application
 
 from bot import config
 from bot.handlers import enrich as enrich_handler
-from bot.handlers import export_cmds, job_control, scrape_flow, start_help
+from bot.handlers import export_cmds, job_control, quota_status, scrape_flow, start_help
 
 
 def build_application() -> Application:
@@ -26,6 +26,7 @@ def build_application() -> Application:
     enrich_handler.register(app)
     export_cmds.register(app)
     job_control.register(app)
+    quota_status.register(app)
     return app
 
 
