@@ -1,0 +1,28 @@
+# Secrets — never commit
+.env
+.env.local
+*.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.venv/
+venv/
+env/
+
+# Scraper outputs (ephemeral on Render anyway)
+resultados/
+*.checkpoint.json
+temp_*.py
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/
+.claude/
+
+# Optional: keep cities reference data in repo so the bot doesn't need build_data.py at boot
+# (uncomment if you'd rather generate it on first run instead)
+# data/us_cities.json

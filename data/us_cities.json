@@ -1,0 +1,1749 @@
+{
+  "provincias": [
+    {
+      "nombre": "Alabama",
+      "localidades": [
+        {
+          "nombre": "Birmingham",
+          "es_principal": true,
+          "poblacion": 196000
+        },
+        {
+          "nombre": "Montgomery",
+          "es_principal": true,
+          "poblacion": 196000
+        },
+        {
+          "nombre": "Huntsville",
+          "es_principal": true,
+          "poblacion": 225000
+        },
+        {
+          "nombre": "Mobile",
+          "es_principal": false,
+          "poblacion": 183000
+        },
+        {
+          "nombre": "Tuscaloosa",
+          "es_principal": false,
+          "poblacion": 111000
+        }
+      ]
+    },
+    {
+      "nombre": "Alaska",
+      "localidades": [
+        {
+          "nombre": "Anchorage",
+          "es_principal": true,
+          "poblacion": 287000
+        },
+        {
+          "nombre": "Fairbanks",
+          "es_principal": true,
+          "poblacion": 32000
+        },
+        {
+          "nombre": "Juneau",
+          "es_principal": true,
+          "poblacion": 31000
+        },
+        {
+          "nombre": "Sitka",
+          "es_principal": false,
+          "poblacion": 8500
+        },
+        {
+          "nombre": "Ketchikan",
+          "es_principal": false,
+          "poblacion": 8200
+        }
+      ]
+    },
+    {
+      "nombre": "Arizona",
+      "localidades": [
+        {
+          "nombre": "Phoenix",
+          "es_principal": true,
+          "poblacion": 1650000
+        },
+        {
+          "nombre": "Tucson",
+          "es_principal": true,
+          "poblacion": 545000
+        },
+        {
+          "nombre": "Mesa",
+          "es_principal": true,
+          "poblacion": 510000
+        },
+        {
+          "nombre": "Chandler",
+          "es_principal": false,
+          "poblacion": 280000
+        },
+        {
+          "nombre": "Scottsdale",
+          "es_principal": false,
+          "poblacion": 241000
+        },
+        {
+          "nombre": "Tempe",
+          "es_principal": false,
+          "poblacion": 184000
+        },
+        {
+          "nombre": "Gilbert",
+          "es_principal": false,
+          "poblacion": 275000
+        },
+        {
+          "nombre": "Glendale",
+          "es_principal": false,
+          "poblacion": 253000
+        }
+      ]
+    },
+    {
+      "nombre": "Arkansas",
+      "localidades": [
+        {
+          "nombre": "Little Rock",
+          "es_principal": true,
+          "poblacion": 202000
+        },
+        {
+          "nombre": "Fort Smith",
+          "es_principal": true,
+          "poblacion": 89000
+        },
+        {
+          "nombre": "Fayetteville",
+          "es_principal": true,
+          "poblacion": 95000
+        },
+        {
+          "nombre": "Springdale",
+          "es_principal": false,
+          "poblacion": 87000
+        },
+        {
+          "nombre": "Jonesboro",
+          "es_principal": false,
+          "poblacion": 80000
+        }
+      ]
+    },
+    {
+      "nombre": "California",
+      "localidades": [
+        {
+          "nombre": "Los Angeles",
+          "es_principal": true,
+          "poblacion": 3820000
+        },
+        {
+          "nombre": "San Diego",
+          "es_principal": true,
+          "poblacion": 1388000
+        },
+        {
+          "nombre": "San Jose",
+          "es_principal": true,
+          "poblacion": 970000
+        },
+        {
+          "nombre": "San Francisco",
+          "es_principal": false,
+          "poblacion": 808000
+        },
+        {
+          "nombre": "Fresno",
+          "es_principal": false,
+          "poblacion": 543000
+        },
+        {
+          "nombre": "Sacramento",
+          "es_principal": false,
+          "poblacion": 526000
+        },
+        {
+          "nombre": "Long Beach",
+          "es_principal": false,
+          "poblacion": 451000
+        },
+        {
+          "nombre": "Oakland",
+          "es_principal": false,
+          "poblacion": 430000
+        },
+        {
+          "nombre": "Bakersfield",
+          "es_principal": false,
+          "poblacion": 410000
+        },
+        {
+          "nombre": "Anaheim",
+          "es_principal": false,
+          "poblacion": 345000
+        },
+        {
+          "nombre": "Santa Ana",
+          "es_principal": false,
+          "poblacion": 309000
+        },
+        {
+          "nombre": "Riverside",
+          "es_principal": false,
+          "poblacion": 317000
+        },
+        {
+          "nombre": "Stockton",
+          "es_principal": false,
+          "poblacion": 320000
+        },
+        {
+          "nombre": "Irvine",
+          "es_principal": false,
+          "poblacion": 313000
+        },
+        {
+          "nombre": "Chula Vista",
+          "es_principal": false,
+          "poblacion": 277000
+        },
+        {
+          "nombre": "Fremont",
+          "es_principal": false,
+          "poblacion": 227000
+        },
+        {
+          "nombre": "San Bernardino",
+          "es_principal": false,
+          "poblacion": 221000
+        },
+        {
+          "nombre": "Modesto",
+          "es_principal": false,
+          "poblacion": 218000
+        },
+        {
+          "nombre": "Fontana",
+          "es_principal": false,
+          "poblacion": 209000
+        },
+        {
+          "nombre": "Santa Clarita",
+          "es_principal": false,
+          "poblacion": 230000
+        }
+      ]
+    },
+    {
+      "nombre": "Colorado",
+      "localidades": [
+        {
+          "nombre": "Denver",
+          "es_principal": true,
+          "poblacion": 716000
+        },
+        {
+          "nombre": "Colorado Springs",
+          "es_principal": true,
+          "poblacion": 488000
+        },
+        {
+          "nombre": "Aurora",
+          "es_principal": true,
+          "poblacion": 391000
+        },
+        {
+          "nombre": "Fort Collins",
+          "es_principal": false,
+          "poblacion": 170000
+        },
+        {
+          "nombre": "Lakewood",
+          "es_principal": false,
+          "poblacion": 156000
+        },
+        {
+          "nombre": "Boulder",
+          "es_principal": false,
+          "poblacion": 105000
+        },
+        {
+          "nombre": "Pueblo",
+          "es_principal": false,
+          "poblacion": 111000
+        }
+      ]
+    },
+    {
+      "nombre": "Connecticut",
+      "localidades": [
+        {
+          "nombre": "Bridgeport",
+          "es_principal": true,
+          "poblacion": 148000
+        },
+        {
+          "nombre": "New Haven",
+          "es_principal": true,
+          "poblacion": 135000
+        },
+        {
+          "nombre": "Hartford",
+          "es_principal": true,
+          "poblacion": 121000
+        },
+        {
+          "nombre": "Stamford",
+          "es_principal": false,
+          "poblacion": 136000
+        },
+        {
+          "nombre": "Waterbury",
+          "es_principal": false,
+          "poblacion": 114000
+        }
+      ]
+    },
+    {
+      "nombre": "Delaware",
+      "localidades": [
+        {
+          "nombre": "Wilmington",
+          "es_principal": true,
+          "poblacion": 71000
+        },
+        {
+          "nombre": "Dover",
+          "es_principal": true,
+          "poblacion": 39000
+        },
+        {
+          "nombre": "Newark",
+          "es_principal": true,
+          "poblacion": 32000
+        },
+        {
+          "nombre": "Middletown",
+          "es_principal": false,
+          "poblacion": 23000
+        }
+      ]
+    },
+    {
+      "nombre": "Florida",
+      "localidades": [
+        {
+          "nombre": "Jacksonville",
+          "es_principal": true,
+          "poblacion": 985000
+        },
+        {
+          "nombre": "Miami",
+          "es_principal": true,
+          "poblacion": 449000
+        },
+        {
+          "nombre": "Tampa",
+          "es_principal": true,
+          "poblacion": 398000
+        },
+        {
+          "nombre": "Orlando",
+          "es_principal": false,
+          "poblacion": 320000
+        },
+        {
+          "nombre": "St. Petersburg",
+          "es_principal": false,
+          "poblacion": 263000
+        },
+        {
+          "nombre": "Hialeah",
+          "es_principal": false,
+          "poblacion": 222000
+        },
+        {
+          "nombre": "Tallahassee",
+          "es_principal": false,
+          "poblacion": 202000
+        },
+        {
+          "nombre": "Fort Lauderdale",
+          "es_principal": false,
+          "poblacion": 184000
+        },
+        {
+          "nombre": "Cape Coral",
+          "es_principal": false,
+          "poblacion": 224000
+        },
+        {
+          "nombre": "Pembroke Pines",
+          "es_principal": false,
+          "poblacion": 170000
+        },
+        {
+          "nombre": "Hollywood",
+          "es_principal": false,
+          "poblacion": 153000
+        },
+        {
+          "nombre": "Gainesville",
+          "es_principal": false,
+          "poblacion": 145000
+        },
+        {
+          "nombre": "Miramar",
+          "es_principal": false,
+          "poblacion": 136000
+        },
+        {
+          "nombre": "Coral Springs",
+          "es_principal": false,
+          "poblacion": 134000
+        },
+        {
+          "nombre": "West Palm Beach",
+          "es_principal": false,
+          "poblacion": 119000
+        }
+      ]
+    },
+    {
+      "nombre": "Georgia",
+      "localidades": [
+        {
+          "nombre": "Atlanta",
+          "es_principal": true,
+          "poblacion": 510000
+        },
+        {
+          "nombre": "Augusta",
+          "es_principal": true,
+          "poblacion": 202000
+        },
+        {
+          "nombre": "Columbus",
+          "es_principal": true,
+          "poblacion": 201000
+        },
+        {
+          "nombre": "Savannah",
+          "es_principal": false,
+          "poblacion": 148000
+        },
+        {
+          "nombre": "Athens",
+          "es_principal": false,
+          "poblacion": 127000
+        },
+        {
+          "nombre": "Macon",
+          "es_principal": false,
+          "poblacion": 157000
+        },
+        {
+          "nombre": "Sandy Springs",
+          "es_principal": false,
+          "poblacion": 109000
+        }
+      ]
+    },
+    {
+      "nombre": "Hawaii",
+      "localidades": [
+        {
+          "nombre": "Honolulu",
+          "es_principal": true,
+          "poblacion": 343000
+        },
+        {
+          "nombre": "Pearl City",
+          "es_principal": true,
+          "poblacion": 45000
+        },
+        {
+          "nombre": "Hilo",
+          "es_principal": true,
+          "poblacion": 44000
+        },
+        {
+          "nombre": "Kailua",
+          "es_principal": false,
+          "poblacion": 37000
+        }
+      ]
+    },
+    {
+      "nombre": "Idaho",
+      "localidades": [
+        {
+          "nombre": "Boise",
+          "es_principal": true,
+          "poblacion": 240000
+        },
+        {
+          "nombre": "Meridian",
+          "es_principal": true,
+          "poblacion": 134000
+        },
+        {
+          "nombre": "Nampa",
+          "es_principal": true,
+          "poblacion": 113000
+        },
+        {
+          "nombre": "Idaho Falls",
+          "es_principal": false,
+          "poblacion": 67000
+        },
+        {
+          "nombre": "Pocatello",
+          "es_principal": false,
+          "poblacion": 57000
+        }
+      ]
+    },
+    {
+      "nombre": "Illinois",
+      "localidades": [
+        {
+          "nombre": "Chicago",
+          "es_principal": true,
+          "poblacion": 2665000
+        },
+        {
+          "nombre": "Aurora",
+          "es_principal": true,
+          "poblacion": 178000
+        },
+        {
+          "nombre": "Joliet",
+          "es_principal": true,
+          "poblacion": 151000
+        },
+        {
+          "nombre": "Naperville",
+          "es_principal": false,
+          "poblacion": 150000
+        },
+        {
+          "nombre": "Rockford",
+          "es_principal": false,
+          "poblacion": 145000
+        },
+        {
+          "nombre": "Springfield",
+          "es_principal": false,
+          "poblacion": 114000
+        },
+        {
+          "nombre": "Peoria",
+          "es_principal": false,
+          "poblacion": 110000
+        }
+      ]
+    },
+    {
+      "nombre": "Indiana",
+      "localidades": [
+        {
+          "nombre": "Indianapolis",
+          "es_principal": true,
+          "poblacion": 880000
+        },
+        {
+          "nombre": "Fort Wayne",
+          "es_principal": true,
+          "poblacion": 270000
+        },
+        {
+          "nombre": "Evansville",
+          "es_principal": true,
+          "poblacion": 115000
+        },
+        {
+          "nombre": "South Bend",
+          "es_principal": false,
+          "poblacion": 103000
+        },
+        {
+          "nombre": "Carmel",
+          "es_principal": false,
+          "poblacion": 102000
+        },
+        {
+          "nombre": "Fishers",
+          "es_principal": false,
+          "poblacion": 100000
+        }
+      ]
+    },
+    {
+      "nombre": "Iowa",
+      "localidades": [
+        {
+          "nombre": "Des Moines",
+          "es_principal": true,
+          "poblacion": 213000
+        },
+        {
+          "nombre": "Cedar Rapids",
+          "es_principal": true,
+          "poblacion": 137000
+        },
+        {
+          "nombre": "Davenport",
+          "es_principal": true,
+          "poblacion": 101000
+        },
+        {
+          "nombre": "Sioux City",
+          "es_principal": false,
+          "poblacion": 85000
+        },
+        {
+          "nombre": "Iowa City",
+          "es_principal": false,
+          "poblacion": 75000
+        }
+      ]
+    },
+    {
+      "nombre": "Kansas",
+      "localidades": [
+        {
+          "nombre": "Wichita",
+          "es_principal": true,
+          "poblacion": 397000
+        },
+        {
+          "nombre": "Overland Park",
+          "es_principal": true,
+          "poblacion": 197000
+        },
+        {
+          "nombre": "Kansas City",
+          "es_principal": true,
+          "poblacion": 156000
+        },
+        {
+          "nombre": "Olathe",
+          "es_principal": false,
+          "poblacion": 143000
+        },
+        {
+          "nombre": "Topeka",
+          "es_principal": false,
+          "poblacion": 125000
+        }
+      ]
+    },
+    {
+      "nombre": "Kentucky",
+      "localidades": [
+        {
+          "nombre": "Louisville",
+          "es_principal": true,
+          "poblacion": 624000
+        },
+        {
+          "nombre": "Lexington",
+          "es_principal": true,
+          "poblacion": 322000
+        },
+        {
+          "nombre": "Bowling Green",
+          "es_principal": true,
+          "poblacion": 75000
+        },
+        {
+          "nombre": "Owensboro",
+          "es_principal": false,
+          "poblacion": 60000
+        },
+        {
+          "nombre": "Covington",
+          "es_principal": false,
+          "poblacion": 41000
+        }
+      ]
+    },
+    {
+      "nombre": "Louisiana",
+      "localidades": [
+        {
+          "nombre": "New Orleans",
+          "es_principal": true,
+          "poblacion": 364000
+        },
+        {
+          "nombre": "Baton Rouge",
+          "es_principal": true,
+          "poblacion": 218000
+        },
+        {
+          "nombre": "Shreveport",
+          "es_principal": true,
+          "poblacion": 180000
+        },
+        {
+          "nombre": "Metairie",
+          "es_principal": false,
+          "poblacion": 143000
+        },
+        {
+          "nombre": "Lafayette",
+          "es_principal": false,
+          "poblacion": 121000
+        }
+      ]
+    },
+    {
+      "nombre": "Maine",
+      "localidades": [
+        {
+          "nombre": "Portland",
+          "es_principal": true,
+          "poblacion": 68000
+        },
+        {
+          "nombre": "Lewiston",
+          "es_principal": true,
+          "poblacion": 37000
+        },
+        {
+          "nombre": "Bangor",
+          "es_principal": true,
+          "poblacion": 32000
+        },
+        {
+          "nombre": "South Portland",
+          "es_principal": false,
+          "poblacion": 26000
+        }
+      ]
+    },
+    {
+      "nombre": "Maryland",
+      "localidades": [
+        {
+          "nombre": "Baltimore",
+          "es_principal": true,
+          "poblacion": 569000
+        },
+        {
+          "nombre": "Frederick",
+          "es_principal": true,
+          "poblacion": 80000
+        },
+        {
+          "nombre": "Rockville",
+          "es_principal": true,
+          "poblacion": 68000
+        },
+        {
+          "nombre": "Gaithersburg",
+          "es_principal": false,
+          "poblacion": 70000
+        },
+        {
+          "nombre": "Bowie",
+          "es_principal": false,
+          "poblacion": 58000
+        }
+      ]
+    },
+    {
+      "nombre": "Massachusetts",
+      "localidades": [
+        {
+          "nombre": "Boston",
+          "es_principal": true,
+          "poblacion": 651000
+        },
+        {
+          "nombre": "Worcester",
+          "es_principal": true,
+          "poblacion": 207000
+        },
+        {
+          "nombre": "Springfield",
+          "es_principal": true,
+          "poblacion": 154000
+        },
+        {
+          "nombre": "Cambridge",
+          "es_principal": false,
+          "poblacion": 118000
+        },
+        {
+          "nombre": "Lowell",
+          "es_principal": false,
+          "poblacion": 115000
+        },
+        {
+          "nombre": "Providence",
+          "es_principal": false,
+          "poblacion": 190000
+        }
+      ]
+    },
+    {
+      "nombre": "Michigan",
+      "localidades": [
+        {
+          "nombre": "Detroit",
+          "es_principal": true,
+          "poblacion": 631000
+        },
+        {
+          "nombre": "Grand Rapids",
+          "es_principal": true,
+          "poblacion": 198000
+        },
+        {
+          "nombre": "Warren",
+          "es_principal": true,
+          "poblacion": 139000
+        },
+        {
+          "nombre": "Sterling Heights",
+          "es_principal": false,
+          "poblacion": 134000
+        },
+        {
+          "nombre": "Ann Arbor",
+          "es_principal": false,
+          "poblacion": 123000
+        },
+        {
+          "nombre": "Lansing",
+          "es_principal": false,
+          "poblacion": 112000
+        },
+        {
+          "nombre": "Flint",
+          "es_principal": false,
+          "poblacion": 80000
+        }
+      ]
+    },
+    {
+      "nombre": "Minnesota",
+      "localidades": [
+        {
+          "nombre": "Minneapolis",
+          "es_principal": true,
+          "poblacion": 425000
+        },
+        {
+          "nombre": "Saint Paul",
+          "es_principal": true,
+          "poblacion": 308000
+        },
+        {
+          "nombre": "Rochester",
+          "es_principal": true,
+          "poblacion": 122000
+        },
+        {
+          "nombre": "Duluth",
+          "es_principal": false,
+          "poblacion": 86000
+        },
+        {
+          "nombre": "Bloomington",
+          "es_principal": false,
+          "poblacion": 89000
+        }
+      ]
+    },
+    {
+      "nombre": "Mississippi",
+      "localidades": [
+        {
+          "nombre": "Jackson",
+          "es_principal": true,
+          "poblacion": 145000
+        },
+        {
+          "nombre": "Gulfport",
+          "es_principal": true,
+          "poblacion": 72000
+        },
+        {
+          "nombre": "Southaven",
+          "es_principal": true,
+          "poblacion": 56000
+        },
+        {
+          "nombre": "Hattiesburg",
+          "es_principal": false,
+          "poblacion": 48000
+        },
+        {
+          "nombre": "Biloxi",
+          "es_principal": false,
+          "poblacion": 49000
+        }
+      ]
+    },
+    {
+      "nombre": "Missouri",
+      "localidades": [
+        {
+          "nombre": "Kansas City",
+          "es_principal": true,
+          "poblacion": 510000
+        },
+        {
+          "nombre": "St. Louis",
+          "es_principal": true,
+          "poblacion": 281000
+        },
+        {
+          "nombre": "Springfield",
+          "es_principal": true,
+          "poblacion": 170000
+        },
+        {
+          "nombre": "Columbia",
+          "es_principal": false,
+          "poblacion": 127000
+        },
+        {
+          "nombre": "Independence",
+          "es_principal": false,
+          "poblacion": 123000
+        }
+      ]
+    },
+    {
+      "nombre": "Montana",
+      "localidades": [
+        {
+          "nombre": "Billings",
+          "es_principal": true,
+          "poblacion": 119000
+        },
+        {
+          "nombre": "Missoula",
+          "es_principal": true,
+          "poblacion": 77000
+        },
+        {
+          "nombre": "Great Falls",
+          "es_principal": true,
+          "poblacion": 60000
+        },
+        {
+          "nombre": "Bozeman",
+          "es_principal": false,
+          "poblacion": 56000
+        }
+      ]
+    },
+    {
+      "nombre": "Nebraska",
+      "localidades": [
+        {
+          "nombre": "Omaha",
+          "es_principal": true,
+          "poblacion": 485000
+        },
+        {
+          "nombre": "Lincoln",
+          "es_principal": true,
+          "poblacion": 294000
+        },
+        {
+          "nombre": "Bellevue",
+          "es_principal": true,
+          "poblacion": 64000
+        },
+        {
+          "nombre": "Grand Island",
+          "es_principal": false,
+          "poblacion": 53000
+        }
+      ]
+    },
+    {
+      "nombre": "Nevada",
+      "localidades": [
+        {
+          "nombre": "Las Vegas",
+          "es_principal": true,
+          "poblacion": 660000
+        },
+        {
+          "nombre": "Henderson",
+          "es_principal": true,
+          "poblacion": 325000
+        },
+        {
+          "nombre": "Reno",
+          "es_principal": true,
+          "poblacion": 268000
+        },
+        {
+          "nombre": "North Las Vegas",
+          "es_principal": false,
+          "poblacion": 277000
+        },
+        {
+          "nombre": "Sparks",
+          "es_principal": false,
+          "poblacion": 109000
+        }
+      ]
+    },
+    {
+      "nombre": "New Hampshire",
+      "localidades": [
+        {
+          "nombre": "Manchester",
+          "es_principal": true,
+          "poblacion": 116000
+        },
+        {
+          "nombre": "Nashua",
+          "es_principal": true,
+          "poblacion": 91000
+        },
+        {
+          "nombre": "Concord",
+          "es_principal": true,
+          "poblacion": 44000
+        },
+        {
+          "nombre": "Dover",
+          "es_principal": false,
+          "poblacion": 33000
+        }
+      ]
+    },
+    {
+      "nombre": "New Jersey",
+      "localidades": [
+        {
+          "nombre": "Newark",
+          "es_principal": true,
+          "poblacion": 305000
+        },
+        {
+          "nombre": "Jersey City",
+          "es_principal": true,
+          "poblacion": 291000
+        },
+        {
+          "nombre": "Paterson",
+          "es_principal": true,
+          "poblacion": 159000
+        },
+        {
+          "nombre": "Elizabeth",
+          "es_principal": false,
+          "poblacion": 137000
+        },
+        {
+          "nombre": "Edison",
+          "es_principal": false,
+          "poblacion": 108000
+        },
+        {
+          "nombre": "Trenton",
+          "es_principal": false,
+          "poblacion": 90000
+        }
+      ]
+    },
+    {
+      "nombre": "New Mexico",
+      "localidades": [
+        {
+          "nombre": "Albuquerque",
+          "es_principal": true,
+          "poblacion": 561000
+        },
+        {
+          "nombre": "Las Cruces",
+          "es_principal": true,
+          "poblacion": 113000
+        },
+        {
+          "nombre": "Rio Rancho",
+          "es_principal": true,
+          "poblacion": 108000
+        },
+        {
+          "nombre": "Santa Fe",
+          "es_principal": false,
+          "poblacion": 89000
+        }
+      ]
+    },
+    {
+      "nombre": "New York",
+      "localidades": [
+        {
+          "nombre": "New York City",
+          "es_principal": true,
+          "poblacion": 8260000
+        },
+        {
+          "nombre": "Buffalo",
+          "es_principal": true,
+          "poblacion": 274000
+        },
+        {
+          "nombre": "Rochester",
+          "es_principal": true,
+          "poblacion": 210000
+        },
+        {
+          "nombre": "Yonkers",
+          "es_principal": false,
+          "poblacion": 210000
+        },
+        {
+          "nombre": "Syracuse",
+          "es_principal": false,
+          "poblacion": 146000
+        },
+        {
+          "nombre": "Albany",
+          "es_principal": false,
+          "poblacion": 99000
+        },
+        {
+          "nombre": "New Rochelle",
+          "es_principal": false,
+          "poblacion": 78000
+        }
+      ]
+    },
+    {
+      "nombre": "North Carolina",
+      "localidades": [
+        {
+          "nombre": "Charlotte",
+          "es_principal": true,
+          "poblacion": 911000
+        },
+        {
+          "nombre": "Raleigh",
+          "es_principal": true,
+          "poblacion": 482000
+        },
+        {
+          "nombre": "Greensboro",
+          "es_principal": true,
+          "poblacion": 302000
+        },
+        {
+          "nombre": "Durham",
+          "es_principal": false,
+          "poblacion": 296000
+        },
+        {
+          "nombre": "Winston-Salem",
+          "es_principal": false,
+          "poblacion": 250000
+        },
+        {
+          "nombre": "Fayetteville",
+          "es_principal": false,
+          "poblacion": 210000
+        },
+        {
+          "nombre": "Cary",
+          "es_principal": false,
+          "poblacion": 180000
+        }
+      ]
+    },
+    {
+      "nombre": "North Dakota",
+      "localidades": [
+        {
+          "nombre": "Fargo",
+          "es_principal": true,
+          "poblacion": 127000
+        },
+        {
+          "nombre": "Bismarck",
+          "es_principal": true,
+          "poblacion": 74000
+        },
+        {
+          "nombre": "Grand Forks",
+          "es_principal": true,
+          "poblacion": 59000
+        },
+        {
+          "nombre": "Minot",
+          "es_principal": false,
+          "poblacion": 48000
+        }
+      ]
+    },
+    {
+      "nombre": "Ohio",
+      "localidades": [
+        {
+          "nombre": "Columbus",
+          "es_principal": true,
+          "poblacion": 913000
+        },
+        {
+          "nombre": "Cleveland",
+          "es_principal": true,
+          "poblacion": 363000
+        },
+        {
+          "nombre": "Cincinnati",
+          "es_principal": true,
+          "poblacion": 309000
+        },
+        {
+          "nombre": "Toledo",
+          "es_principal": false,
+          "poblacion": 268000
+        },
+        {
+          "nombre": "Akron",
+          "es_principal": false,
+          "poblacion": 188000
+        },
+        {
+          "nombre": "Dayton",
+          "es_principal": false,
+          "poblacion": 137000
+        }
+      ]
+    },
+    {
+      "nombre": "Oklahoma",
+      "localidades": [
+        {
+          "nombre": "Oklahoma City",
+          "es_principal": true,
+          "poblacion": 697000
+        },
+        {
+          "nombre": "Tulsa",
+          "es_principal": true,
+          "poblacion": 411000
+        },
+        {
+          "nombre": "Norman",
+          "es_principal": true,
+          "poblacion": 128000
+        },
+        {
+          "nombre": "Broken Arrow",
+          "es_principal": false,
+          "poblacion": 117000
+        },
+        {
+          "nombre": "Edmond",
+          "es_principal": false,
+          "poblacion": 95000
+        }
+      ]
+    },
+    {
+      "nombre": "Oregon",
+      "localidades": [
+        {
+          "nombre": "Portland",
+          "es_principal": true,
+          "poblacion": 631000
+        },
+        {
+          "nombre": "Salem",
+          "es_principal": true,
+          "poblacion": 177000
+        },
+        {
+          "nombre": "Eugene",
+          "es_principal": true,
+          "poblacion": 175000
+        },
+        {
+          "nombre": "Gresham",
+          "es_principal": false,
+          "poblacion": 113000
+        },
+        {
+          "nombre": "Hillsboro",
+          "es_principal": false,
+          "poblacion": 107000
+        },
+        {
+          "nombre": "Bend",
+          "es_principal": false,
+          "poblacion": 103000
+        }
+      ]
+    },
+    {
+      "nombre": "Pennsylvania",
+      "localidades": [
+        {
+          "nombre": "Philadelphia",
+          "es_principal": true,
+          "poblacion": 1550000
+        },
+        {
+          "nombre": "Pittsburgh",
+          "es_principal": true,
+          "poblacion": 303000
+        },
+        {
+          "nombre": "Allentown",
+          "es_principal": true,
+          "poblacion": 125000
+        },
+        {
+          "nombre": "Erie",
+          "es_principal": false,
+          "poblacion": 94000
+        },
+        {
+          "nombre": "Reading",
+          "es_principal": false,
+          "poblacion": 95000
+        },
+        {
+          "nombre": "Scranton",
+          "es_principal": false,
+          "poblacion": 76000
+        }
+      ]
+    },
+    {
+      "nombre": "Rhode Island",
+      "localidades": [
+        {
+          "nombre": "Providence",
+          "es_principal": true,
+          "poblacion": 190000
+        },
+        {
+          "nombre": "Cranston",
+          "es_principal": true,
+          "poblacion": 82000
+        },
+        {
+          "nombre": "Warwick",
+          "es_principal": true,
+          "poblacion": 82000
+        },
+        {
+          "nombre": "Pawtucket",
+          "es_principal": false,
+          "poblacion": 75000
+        }
+      ]
+    },
+    {
+      "nombre": "South Carolina",
+      "localidades": [
+        {
+          "nombre": "Columbia",
+          "es_principal": true,
+          "poblacion": 137000
+        },
+        {
+          "nombre": "Charleston",
+          "es_principal": true,
+          "poblacion": 155000
+        },
+        {
+          "nombre": "North Charleston",
+          "es_principal": true,
+          "poblacion": 114000
+        },
+        {
+          "nombre": "Mount Pleasant",
+          "es_principal": false,
+          "poblacion": 92000
+        },
+        {
+          "nombre": "Greenville",
+          "es_principal": false,
+          "poblacion": 72000
+        }
+      ]
+    },
+    {
+      "nombre": "South Dakota",
+      "localidades": [
+        {
+          "nombre": "Sioux Falls",
+          "es_principal": true,
+          "poblacion": 202000
+        },
+        {
+          "nombre": "Rapid City",
+          "es_principal": true,
+          "poblacion": 78000
+        },
+        {
+          "nombre": "Aberdeen",
+          "es_principal": true,
+          "poblacion": 28000
+        }
+      ]
+    },
+    {
+      "nombre": "Tennessee",
+      "localidades": [
+        {
+          "nombre": "Memphis",
+          "es_principal": true,
+          "poblacion": 618000
+        },
+        {
+          "nombre": "Nashville",
+          "es_principal": true,
+          "poblacion": 687000
+        },
+        {
+          "nombre": "Knoxville",
+          "es_principal": true,
+          "poblacion": 198000
+        },
+        {
+          "nombre": "Chattanooga",
+          "es_principal": false,
+          "poblacion": 187000
+        },
+        {
+          "nombre": "Clarksville",
+          "es_principal": false,
+          "poblacion": 175000
+        }
+      ]
+    },
+    {
+      "nombre": "Texas",
+      "localidades": [
+        {
+          "nombre": "Houston",
+          "es_principal": true,
+          "poblacion": 2300000
+        },
+        {
+          "nombre": "San Antonio",
+          "es_principal": true,
+          "poblacion": 1495000
+        },
+        {
+          "nombre": "Dallas",
+          "es_principal": true,
+          "poblacion": 1300000
+        },
+        {
+          "nombre": "Austin",
+          "es_principal": false,
+          "poblacion": 974000
+        },
+        {
+          "nombre": "Fort Worth",
+          "es_principal": false,
+          "poblacion": 978000
+        },
+        {
+          "nombre": "El Paso",
+          "es_principal": false,
+          "poblacion": 678000
+        },
+        {
+          "nombre": "Arlington",
+          "es_principal": false,
+          "poblacion": 394000
+        },
+        {
+          "nombre": "Corpus Christi",
+          "es_principal": false,
+          "poblacion": 317000
+        },
+        {
+          "nombre": "Plano",
+          "es_principal": false,
+          "poblacion": 286000
+        },
+        {
+          "nombre": "Laredo",
+          "es_principal": false,
+          "poblacion": 257000
+        },
+        {
+          "nombre": "Lubbock",
+          "es_principal": false,
+          "poblacion": 263000
+        },
+        {
+          "nombre": "Garland",
+          "es_principal": false,
+          "poblacion": 246000
+        },
+        {
+          "nombre": "Irving",
+          "es_principal": false,
+          "poblacion": 256000
+        },
+        {
+          "nombre": "Amarillo",
+          "es_principal": false,
+          "poblacion": 201000
+        },
+        {
+          "nombre": "McKinney",
+          "es_principal": false,
+          "poblacion": 207000
+        },
+        {
+          "nombre": "Frisco",
+          "es_principal": false,
+          "poblacion": 219000
+        }
+      ]
+    },
+    {
+      "nombre": "Utah",
+      "localidades": [
+        {
+          "nombre": "Salt Lake City",
+          "es_principal": true,
+          "poblacion": 209000
+        },
+        {
+          "nombre": "West Valley City",
+          "es_principal": true,
+          "poblacion": 140000
+        },
+        {
+          "nombre": "Provo",
+          "es_principal": true,
+          "poblacion": 115000
+        },
+        {
+          "nombre": "West Jordan",
+          "es_principal": false,
+          "poblacion": 117000
+        },
+        {
+          "nombre": "Orem",
+          "es_principal": false,
+          "poblacion": 98000
+        },
+        {
+          "nombre": "Sandy",
+          "es_principal": false,
+          "poblacion": 95000
+        }
+      ]
+    },
+    {
+      "nombre": "Vermont",
+      "localidades": [
+        {
+          "nombre": "Burlington",
+          "es_principal": true,
+          "poblacion": 45000
+        },
+        {
+          "nombre": "Essex",
+          "es_principal": true,
+          "poblacion": 22000
+        },
+        {
+          "nombre": "South Burlington",
+          "es_principal": true,
+          "poblacion": 20000
+        },
+        {
+          "nombre": "Colchester",
+          "es_principal": false,
+          "poblacion": 17000
+        }
+      ]
+    },
+    {
+      "nombre": "Virginia",
+      "localidades": [
+        {
+          "nombre": "Virginia Beach",
+          "es_principal": true,
+          "poblacion": 457000
+        },
+        {
+          "nombre": "Norfolk",
+          "es_principal": true,
+          "poblacion": 232000
+        },
+        {
+          "nombre": "Chesapeake",
+          "es_principal": true,
+          "poblacion": 251000
+        },
+        {
+          "nombre": "Richmond",
+          "es_principal": false,
+          "poblacion": 229000
+        },
+        {
+          "nombre": "Arlington",
+          "es_principal": false,
+          "poblacion": 238000
+        },
+        {
+          "nombre": "Alexandria",
+          "es_principal": false,
+          "poblacion": 156000
+        }
+      ]
+    },
+    {
+      "nombre": "Washington",
+      "localidades": [
+        {
+          "nombre": "Seattle",
+          "es_principal": true,
+          "poblacion": 755000
+        },
+        {
+          "nombre": "Spokane",
+          "es_principal": true,
+          "poblacion": 230000
+        },
+        {
+          "nombre": "Tacoma",
+          "es_principal": true,
+          "poblacion": 222000
+        },
+        {
+          "nombre": "Vancouver",
+          "es_principal": false,
+          "poblacion": 197000
+        },
+        {
+          "nombre": "Bellevue",
+          "es_principal": false,
+          "poblacion": 152000
+        },
+        {
+          "nombre": "Kirkland",
+          "es_principal": false,
+          "poblacion": 94000
+        },
+        {
+          "nombre": "Olympia",
+          "es_principal": false,
+          "poblacion": 56000
+        }
+      ]
+    },
+    {
+      "nombre": "Washington D.C.",
+      "localidades": [
+        {
+          "nombre": "Washington D.C.",
+          "es_principal": true,
+          "poblacion": 678000
+        }
+      ]
+    },
+    {
+      "nombre": "West Virginia",
+      "localidades": [
+        {
+          "nombre": "Charleston",
+          "es_principal": true,
+          "poblacion": 47000
+        },
+        {
+          "nombre": "Huntington",
+          "es_principal": true,
+          "poblacion": 45000
+        },
+        {
+          "nombre": "Morgantown",
+          "es_principal": true,
+          "poblacion": 30000
+        },
+        {
+          "nombre": "Parkersburg",
+          "es_principal": false,
+          "poblacion": 29000
+        }
+      ]
+    },
+    {
+      "nombre": "Wisconsin",
+      "localidades": [
+        {
+          "nombre": "Milwaukee",
+          "es_principal": true,
+          "poblacion": 561000
+        },
+        {
+          "nombre": "Madison",
+          "es_principal": true,
+          "poblacion": 273000
+        },
+        {
+          "nombre": "Green Bay",
+          "es_principal": true,
+          "poblacion": 107000
+        },
+        {
+          "nombre": "Kenosha",
+          "es_principal": false,
+          "poblacion": 99000
+        },
+        {
+          "nombre": "Racine",
+          "es_principal": false,
+          "poblacion": 76000
+        }
+      ]
+    },
+    {
+      "nombre": "Wyoming",
+      "localidades": [
+        {
+          "nombre": "Cheyenne",
+          "es_principal": true,
+          "poblacion": 65000
+        },
+        {
+          "nombre": "Casper",
+          "es_principal": true,
+          "poblacion": 59000
+        },
+        {
+          "nombre": "Laramie",
+          "es_principal": true,
+          "poblacion": 32000
+        },
+        {
+          "nombre": "Gillette",
+          "es_principal": false,
+          "poblacion": 33000
+        }
+      ]
+    }
+  ]
+}

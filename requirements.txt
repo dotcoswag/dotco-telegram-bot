@@ -1,0 +1,6 @@
+requests
+python-dotenv
+openpyxl
+anthropic
+python-telegram-bot[webhooks]>=21.0
+
