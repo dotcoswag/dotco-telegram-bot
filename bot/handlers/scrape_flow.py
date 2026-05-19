@@ -37,6 +37,14 @@ import scraper as scraper_mod
 ) = range(7)
 
 
+def _format_estimate(low: int, high: int, max_cost: int, limite: Optional[int]) -> str:
+    if limite is not None and low == high == max_cost == limite:
+        return f"Estimated cost: ~{limite:,} businesses (capped by your limit)."
+    if low == high:
+        return f"Estimated cost: ~{low:,} businesses (hard cap {max_cost:,})."
+    return f"Estimated cost: ~{low:,}–{high:,} businesses (hard cap {max_cost:,})."
+
+
 # ── entry ────────────────────────────────────────────────────
 
 async def cmd_scrape(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -283,7 +291,11 @@ async def cb_min_score(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
     typical_high = total_combos * 80
     if limite is not None:
         max_cost = min(max_cost, limite)
+        typical_low = min(typical_low, limite)
         typical_high = min(typical_high, limite)
+    # Defensive: low <= high after capping.
+    if typical_low > typical_high:
+        typical_low = typical_high
 
     # Compute fresh-combo count against the master DB so we can offer to skip.
     all_combos = [
@@ -315,8 +327,7 @@ async def cb_min_score(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
         f"  Min score: {min_score}\n"
         f"\n"
         f"📊 {api_quota.summary_line(quota)}\n"
-        f"Estimated cost: ~{typical_low:,}–{typical_high:,} businesses "
-        f"(hard cap {max_cost:,}).\n"
+        f"{_format_estimate(typical_low, typical_high, max_cost, limite)}\n"
         f"\n"
         f"🗄️ Master DB: {master_size:,} known businesses · "
         f"{fresh_count}/{total_combos} combos scraped in last "
