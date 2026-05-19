@@ -17,13 +17,21 @@ from telegram.ext import (
 
 import main as scraper_main
 
-from bot import config, keyboards
+from bot import cities, config, keyboards
 from bot.job_manager import jobs
 from bot.progress import ProgressBridge
 from bot import scrape_runner
 
 
-CHOOSING_TIER, CHOOSING_CATEGORIES, ASKING_LIMIT, ASKING_MIN_SCORE, CONFIRM = range(5)
+(
+    CHOOSING_TIER,
+    PICKING_STATE,
+    PICKING_CITIES_IN_STATE,
+    CHOOSING_CATEGORIES,
+    ASKING_LIMIT,
+    ASKING_MIN_SCORE,
+    CONFIRM,
+) = range(7)
 
 
 # ── entry ────────────────────────────────────────────────────
@@ -55,6 +63,18 @@ async def cb_tier(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     q = update.callback_query
     await q.answer()
     _, value = q.data.split("|", 1)
+
+    if value == keyboards.CUSTOM_TIER_VALUE:
+        # Custom city picker: state list → cities in state, multi-add across states.
+        context.user_data["tier_label"] = "🌎 Custom cities"
+        context.user_data["selected_city_keys"] = set()  # {(state_idx, city_idx)}
+        await q.edit_message_text(
+            "Pick a state, then toggle cities. You can hop back to add cities from more states.\n"
+            "Tap ✔ Done picking cities when finished.",
+            reply_markup=keyboards.state_keyboard(),
+        )
+        return PICKING_STATE
+
     try:
         idx = int(value)
         tier_label = keyboards.TIER_KEYS[idx]
@@ -66,6 +86,94 @@ async def cb_tier(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     await q.edit_message_text(
         f"Tier: {tier_label}\n"
         f"Cities: {len(context.user_data['localidades'])}\n\n"
+        f"Step 2/4 — pick category groups (multi-select):",
+        reply_markup=keyboards.category_keyboard(set()),
+    )
+    return CHOOSING_CATEGORIES
+
+
+# ── state PICKING_STATE ──────────────────────────────────────
+
+async def cb_pick_state(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    q = update.callback_query
+    await q.answer()
+    _, value = q.data.split("|", 1)
+    try:
+        state_idx = int(value)
+        state_label = cities.state_name(state_idx)
+    except (ValueError, IndexError):
+        return PICKING_STATE
+    context.user_data["current_state_idx"] = state_idx
+    selected_keys: set[tuple[int, int]] = context.user_data.get("selected_city_keys", set())
+    selected_in_state = {ci for (si, ci) in selected_keys if si == state_idx}
+    selected_total = len(selected_keys)
+    await q.edit_message_text(
+        f"State: {state_label}\n"
+        f"Selected so far: {selected_total} cities\n\n"
+        f"Toggle cities below. Population shown in (k).",
+        reply_markup=keyboards.city_keyboard(state_idx, selected_in_state),
+    )
+    return PICKING_CITIES_IN_STATE
+
+
+async def cb_cities_done_from_states(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    return await _finalize_cities(update, context)
+
+
+# ── state PICKING_CITIES_IN_STATE ────────────────────────────
+
+async def cb_toggle_city(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    q = update.callback_query
+    await q.answer()
+    _, value = q.data.split("|", 1)
+    try:
+        city_idx = int(value)
+    except ValueError:
+        return PICKING_CITIES_IN_STATE
+    state_idx: int = context.user_data["current_state_idx"]
+    selected_keys: set[tuple[int, int]] = context.user_data.setdefault("selected_city_keys", set())
+    key = (state_idx, city_idx)
+    if key in selected_keys:
+        selected_keys.remove(key)
+    else:
+        selected_keys.add(key)
+    selected_in_state = {ci for (si, ci) in selected_keys if si == state_idx}
+    await q.edit_message_reply_markup(
+        reply_markup=keyboards.city_keyboard(state_idx, selected_in_state),
+    )
+    return PICKING_CITIES_IN_STATE
+
+
+async def cb_back_to_states(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    q = update.callback_query
+    await q.answer()
+    selected_total = len(context.user_data.get("selected_city_keys", set()))
+    await q.edit_message_text(
+        f"Selected so far: {selected_total} cities\n\n"
+        f"Pick another state or tap ✔ Done.",
+        reply_markup=keyboards.state_keyboard(),
+    )
+    return PICKING_STATE
+
+
+async def cb_cities_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    return await _finalize_cities(update, context)
+
+
+async def _finalize_cities(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    q = update.callback_query
+    await q.answer()
+    selected_keys: set[tuple[int, int]] = context.user_data.get("selected_city_keys", set())
+    if not selected_keys:
+        await q.answer("Pick at least one city.", show_alert=True)
+        return PICKING_STATE
+    localidades = [cities.city_at(si, ci) for (si, ci) in sorted(selected_keys)]
+    context.user_data["localidades"] = localidades
+    context.user_data["selected_categories"] = set()
+    preview = ", ".join(f"{n} ({s})" for n, s in localidades[:5])
+    more = f" … +{len(localidades) - 5} more" if len(localidades) > 5 else ""
+    await q.edit_message_text(
+        f"✓ {len(localidades)} cities: {preview}{more}\n\n"
         f"Step 2/4 — pick category groups (multi-select):",
         reply_markup=keyboards.category_keyboard(set()),
     )
@@ -263,6 +371,17 @@ def register(application) -> None:
         states={
             CHOOSING_TIER: [
                 CallbackQueryHandler(cb_tier, pattern=r"^tier\|"),
+                CallbackQueryHandler(cb_cancel, pattern=r"^cancel\|"),
+            ],
+            PICKING_STATE: [
+                CallbackQueryHandler(cb_pick_state, pattern=r"^state\|"),
+                CallbackQueryHandler(cb_cities_done_from_states, pattern=r"^cities_done\|"),
+                CallbackQueryHandler(cb_cancel, pattern=r"^cancel\|"),
+            ],
+            PICKING_CITIES_IN_STATE: [
+                CallbackQueryHandler(cb_toggle_city, pattern=r"^city\|"),
+                CallbackQueryHandler(cb_back_to_states, pattern=r"^state_back\|"),
+                CallbackQueryHandler(cb_cities_done, pattern=r"^cities_done\|"),
                 CallbackQueryHandler(cb_cancel, pattern=r"^cancel\|"),
             ],
             CHOOSING_CATEGORIES: [

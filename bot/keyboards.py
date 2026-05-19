@@ -4,15 +4,56 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
 import main as scraper_main
 
+from bot import cities
+
 
 TIER_KEYS = list(scraper_main.MERCADOS_RECOMENDADOS.keys())
 CATEGORY_KEYS = list(scraper_main.CATEGORIAS.keys())
+
+CUSTOM_TIER_VALUE = "custom"
 
 
 def tier_keyboard() -> InlineKeyboardMarkup:
     rows = [[InlineKeyboardButton(label, callback_data=f"tier|{i}")]
             for i, label in enumerate(TIER_KEYS)]
+    rows.append([InlineKeyboardButton("🌎 Pick cities manually",
+                                      callback_data=f"tier|{CUSTOM_TIER_VALUE}")])
     rows.append([InlineKeyboardButton("✖ Cancel", callback_data="cancel|")])
+    return InlineKeyboardMarkup(rows)
+
+
+def state_keyboard() -> InlineKeyboardMarkup:
+    """3-column grid of US states + DC. Indices map to bot.cities.STATES."""
+    rows = []
+    cols = 3
+    for i in range(0, len(cities.STATES), cols):
+        row = []
+        for j in range(cols):
+            if i + j >= len(cities.STATES):
+                break
+            row.append(InlineKeyboardButton(
+                cities.state_name(i + j),
+                callback_data=f"state|{i + j}",
+            ))
+        rows.append(row)
+    rows.append([
+        InlineKeyboardButton("✔ Done picking cities", callback_data="cities_done|"),
+        InlineKeyboardButton("✖ Cancel", callback_data="cancel|"),
+    ])
+    return InlineKeyboardMarkup(rows)
+
+
+def city_keyboard(state_idx: int, selected_in_state: set[int]) -> InlineKeyboardMarkup:
+    rows = []
+    for ci, city in enumerate(cities.cities_in_state(state_idx)):
+        mark = "✅ " if ci in selected_in_state else "▫️ "
+        pop = city.get("poblacion", 0)
+        label = f"{mark}{city['nombre']} ({pop//1000}k)"
+        rows.append([InlineKeyboardButton(label, callback_data=f"city|{ci}")])
+    rows.append([
+        InlineKeyboardButton("← Back to states", callback_data="state_back|"),
+        InlineKeyboardButton("✔ Done", callback_data="cities_done|"),
+    ])
     return InlineKeyboardMarkup(rows)
 
 
