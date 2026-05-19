@@ -33,6 +33,7 @@ def run(
     bridge: ProgressBridge,
     cancel_event: threading.Event,
     skip_fresh: bool = True,
+    limite_por_combo: Optional[int] = None,
 ) -> dict:
     """Run a scrape job. Returns a result dict including the CSV path."""
     os.makedirs(scraper_main.RESULTADOS_DIR, exist_ok=True)
@@ -73,7 +74,7 @@ def run(
         f"⏳ Starting scrape\n"
         f"  combos: {total_combos} (skipped fresh: {skipped_fresh})\n"
         f"  master primed: {primed_count} business_ids loaded\n"
-        f"  limit: {limite or '∞'}, min_score: {min_score}",
+        f"  per-combo cap: {limite_por_combo or '∞'} · total cap: {limite or '∞'} · min_score: {min_score}",
         force=True,
     )
 
@@ -97,6 +98,7 @@ def run(
                 min_score=min_score,
                 cancel_event=cancel_event,
                 on_new_rows=leads_db.add_rows,
+                limite_por_combo=limite_por_combo,
             )
         except QuotaExhausted as e:
             bridge.push(

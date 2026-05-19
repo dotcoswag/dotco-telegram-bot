@@ -31,18 +31,19 @@ import scraper as scraper_mod
     PICKING_STATE,
     PICKING_CITIES_IN_STATE,
     CHOOSING_CATEGORIES,
-    ASKING_LIMIT,
+    ASKING_LIMIT_PER_COMBO,
+    ASKING_LIMIT_TOTAL,
     ASKING_MIN_SCORE,
     CONFIRM,
-) = range(7)
+) = range(8)
 
 
-def _format_estimate(low: int, high: int, max_cost: int, limite: Optional[int]) -> str:
-    if limite is not None and low == high == max_cost == limite:
-        return f"Estimated cost: ~{limite:,} businesses (capped by your limit)."
+def _format_estimate(low: int, high: int, max_cost: int, limite_total: Optional[int]) -> str:
+    if limite_total is not None and low == high == max_cost == limite_total:
+        return f"Estimated cost: ~{limite_total:,} businesses (capped by total limit)."
     if low == high:
-        return f"Estimated cost: ~{low:,} businesses (hard cap {max_cost:,})."
-    return f"Estimated cost: ~{low:,}–{high:,} businesses (hard cap {max_cost:,})."
+        return f"Estimated cost: ~{low:,} businesses (max possible {max_cost:,})."
+    return f"Estimated cost: ~{low:,}–{high:,} businesses (max possible {max_cost:,})."
 
 
 # ── entry ────────────────────────────────────────────────────
@@ -235,30 +236,63 @@ async def cb_cat_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
         flat.extend(scraper_main.CATEGORIAS[label])
     context.user_data["categorias_labels"] = chosen_labels
     context.user_data["categorias"] = flat
+    num_combos = len(context.user_data["localidades"]) * len(flat)
     await q.edit_message_text(
-        f"Groups: {len(chosen_labels)} → {len(flat)} queries per city\n\n"
-        f"Step 3/4 — reply with a max-leads number (e.g. 100), "
-        f"or send `0` for unlimited.",
+        f"Groups: {len(chosen_labels)} → {len(flat)} queries per city\n"
+        f"Total combos (city × category): {num_combos}\n\n"
+        f"Step 3/5 — max API responses **PER COMBO** (i.e. per `city × category` query).\n"
+        f"Each response = 1 quota point. Typical small-mid city has ~20–80 results.\n"
+        f"Reply with a number (e.g. 30), or `0` for unlimited.",
         reply_markup=keyboards.back_only_keyboard("categories"),
     )
-    return ASKING_LIMIT
+    return ASKING_LIMIT_PER_COMBO
 
 
-# ── state ASKING_LIMIT ───────────────────────────────────────
+# ── state ASKING_LIMIT_PER_COMBO ─────────────────────────────
 
-async def msg_limit(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+async def msg_limit_per_combo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     text = (update.message.text or "").strip()
     try:
         n = int(text)
         if n < 0:
             raise ValueError
     except ValueError:
-        await update.message.reply_text("Please reply with a non-negative integer, or `0` for unlimited.")
-        return ASKING_LIMIT
+        await update.message.reply_text(
+            "Please reply with a non-negative integer, or `0` for unlimited per combo."
+        )
+        return ASKING_LIMIT_PER_COMBO
+    context.user_data["limite_por_combo"] = None if n == 0 else n
+    num_combos = len(context.user_data["localidades"]) * len(context.user_data["categorias"])
+    per_combo_label = "∞" if n == 0 else str(n)
+    suggestion = (n * num_combos) if n > 0 else "∞"
+    await update.message.reply_text(
+        f"Per-combo cap: {per_combo_label}\n"
+        f"Worst case if every combo fills: {suggestion}\n\n"
+        f"Step 4/5 — max **TOTAL** businesses across the whole scrape.\n"
+        f"Use this to put a hard ceiling on quota spend (your monthly cap is 500).\n"
+        f"Reply with a number (e.g. 300), or `0` for unlimited total.",
+        reply_markup=keyboards.back_only_keyboard("limit_per_combo"),
+    )
+    return ASKING_LIMIT_TOTAL
+
+
+# ── state ASKING_LIMIT_TOTAL ─────────────────────────────────
+
+async def msg_limit_total(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    text = (update.message.text or "").strip()
+    try:
+        n = int(text)
+        if n < 0:
+            raise ValueError
+    except ValueError:
+        await update.message.reply_text(
+            "Please reply with a non-negative integer, or `0` for unlimited total."
+        )
+        return ASKING_LIMIT_TOTAL
     context.user_data["limite"] = None if n == 0 else n
     await update.message.reply_text(
-        "Step 4/4 — pick a minimum lead_score (0–7):",
-        reply_markup=keyboards.min_score_keyboard(back_target="limit"),
+        "Step 5/5 — pick a minimum lead_score (0–7):",
+        reply_markup=keyboards.min_score_keyboard(back_target="limit_total"),
     )
     return ASKING_MIN_SCORE
 
@@ -274,7 +308,8 @@ async def cb_min_score(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
     except ValueError:
         return ASKING_MIN_SCORE
     context.user_data["min_score"] = min_score
-    limite = context.user_data["limite"]
+    limite = context.user_data.get("limite")
+    limite_por_combo = context.user_data.get("limite_por_combo")
     num_cities = len(context.user_data["localidades"])
     num_queries_per_city = len(context.user_data["categorias"])
     total_combos = num_cities * num_queries_per_city
@@ -284,16 +319,19 @@ async def cb_min_score(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
     quota = await loop.run_in_executor(None, api_quota.fetch)
     context.user_data["quota_before"] = quota
 
-    # Each combo can return up to LIMIT_POR_LLAMADA=500 businesses (one page).
-    # In practice small-mid cities return ~20-80 per category. Show both ends.
-    max_cost = total_combos * scraper_mod.LIMIT_POR_LLAMADA
-    typical_low = total_combos * 20
-    typical_high = total_combos * 80
+    # Per-combo theoretical max = min(LIMIT_POR_LLAMADA, limite_por_combo).
+    per_combo_max = min(scraper_mod.LIMIT_POR_LLAMADA,
+                        limite_por_combo or scraper_mod.LIMIT_POR_LLAMADA)
+    # Typical density 20–80 unless per-combo cap shaves it.
+    per_combo_low = min(20, per_combo_max)
+    per_combo_high = min(80, per_combo_max)
+    typical_low = total_combos * per_combo_low
+    typical_high = total_combos * per_combo_high
+    max_cost = total_combos * per_combo_max
     if limite is not None:
         max_cost = min(max_cost, limite)
         typical_low = min(typical_low, limite)
         typical_high = min(typical_high, limite)
-    # Defensive: low <= high after capping.
     if typical_low > typical_high:
         typical_low = typical_high
 
@@ -323,7 +361,8 @@ async def cb_min_score(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
         f"  Groups: {len(context.user_data['categorias_labels'])} "
         f"({num_queries_per_city} queries/city)\n"
         f"  Combos: {total_combos}\n"
-        f"  Limit: {limite if limite is not None else 'unlimited'}\n"
+        f"  Per-combo cap: {limite_por_combo if limite_por_combo else 'unlimited'}\n"
+        f"  Total cap: {limite if limite is not None else 'unlimited'}\n"
         f"  Min score: {min_score}\n"
         f"\n"
         f"📊 {api_quota.summary_line(quota)}\n"
@@ -378,7 +417,8 @@ async def cb_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
     localidades = list(context.user_data["localidades"])
     categorias = list(context.user_data["categorias"])
-    limite = context.user_data["limite"]
+    limite = context.user_data.get("limite")
+    limite_por_combo = context.user_data.get("limite_por_combo")
     min_score = context.user_data["min_score"]
 
     loop = asyncio.get_running_loop()
@@ -395,6 +435,7 @@ async def cb_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
                 bridge,
                 job.cancel_event,
                 skip_fresh,
+                limite_por_combo,
             ),
         )
     except Exception as e:
@@ -484,25 +525,35 @@ async def cb_back(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         selected = context.user_data.get("selected_categories", set())
         back_target = context.user_data.get("category_back_target", "tier")
         await q.edit_message_text(
-            "Step 2/4 — pick category groups (multi-select):",
+            "Step 2/5 — pick category groups (multi-select):",
             reply_markup=keyboards.category_keyboard(selected, back_target=back_target),
         )
         return CHOOSING_CATEGORIES
 
-    if target == "limit":
-        limite = context.user_data.get("limite")
-        current = "unlimited (0)" if limite is None else str(limite)
+    if target == "limit_per_combo":
+        per_combo = context.user_data.get("limite_por_combo")
+        current = "unlimited (0)" if per_combo is None else str(per_combo)
         await q.edit_message_text(
-            f"Step 3/4 — reply with a max-leads number (e.g. 100), or send `0` for unlimited.\n"
+            f"Step 3/5 — max API responses PER COMBO (e.g. 30), or `0` for unlimited.\n"
             f"(current: {current})",
             reply_markup=keyboards.back_only_keyboard("categories"),
         )
-        return ASKING_LIMIT
+        return ASKING_LIMIT_PER_COMBO
+
+    if target == "limit_total":
+        limite = context.user_data.get("limite")
+        current = "unlimited (0)" if limite is None else str(limite)
+        await q.edit_message_text(
+            f"Step 4/5 — max TOTAL businesses (e.g. 300), or `0` for unlimited.\n"
+            f"(current: {current})",
+            reply_markup=keyboards.back_only_keyboard("limit_per_combo"),
+        )
+        return ASKING_LIMIT_TOTAL
 
     if target == "min_score":
         await q.edit_message_text(
-            "Step 4/4 — pick a minimum lead_score (0–7):",
-            reply_markup=keyboards.min_score_keyboard(back_target="limit"),
+            "Step 5/5 — pick a minimum lead_score (0–7):",
+            reply_markup=keyboards.min_score_keyboard(back_target="limit_total"),
         )
         return ASKING_MIN_SCORE
 
@@ -553,8 +604,13 @@ def register(application) -> None:
                 CallbackQueryHandler(cb_back, pattern=r"^back\|"),
                 CallbackQueryHandler(cb_cancel, pattern=r"^cancel\|"),
             ],
-            ASKING_LIMIT: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, msg_limit),
+            ASKING_LIMIT_PER_COMBO: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, msg_limit_per_combo),
+                CallbackQueryHandler(cb_back, pattern=r"^back\|"),
+                CallbackQueryHandler(cb_cancel, pattern=r"^cancel\|"),
+            ],
+            ASKING_LIMIT_TOTAL: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, msg_limit_total),
                 CallbackQueryHandler(cb_back, pattern=r"^back\|"),
                 CallbackQueryHandler(cb_cancel, pattern=r"^cancel\|"),
             ],

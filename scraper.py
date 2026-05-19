@@ -262,8 +262,13 @@ def guardar_en_csv_filas(filas, archivo_csv):
             writer.writerow(fila)
 
 
-def scrape_combinacion(localidad, categoria, provincia, archivo_csv, seen_ids, limite_total, min_score=0, cancel_event=None, on_new_rows=None):
+def scrape_combinacion(localidad, categoria, provincia, archivo_csv, seen_ids, limite_total, min_score=0, cancel_event=None, on_new_rows=None, limite_por_combo=None):
     """Scrape one (localidad, categoria, provincia) combo.
+
+    Two independent caps:
+    - `limite_por_combo`: max API responses fetched for THIS combo (quota cost
+      per combo). When set, we tune the API page size to it so we never overshoot.
+    - `limite_total`: max distinct businesses across the entire run.
 
     on_new_rows: optional callable invoked with the list of newly-written row
     dicts after each page is appended. Used by the bot to mirror writes into
@@ -274,17 +279,27 @@ def scrape_combinacion(localidad, categoria, provincia, archivo_csv, seen_ids, l
     total_nuevos = 0
     total_duplicados = 0
     total_skipped_score = 0
+    fetched_this_combo = 0
+
+    page_size = (
+        min(LIMIT_POR_LLAMADA, limite_por_combo)
+        if (limite_por_combo and limite_por_combo > 0)
+        else LIMIT_POR_LLAMADA
+    )
 
     while True:
         if cancel_event is not None and cancel_event.is_set():
             break
         if limite_total is not None and len(seen_ids) >= limite_total:
             break
+        if limite_por_combo is not None and fetched_this_combo >= limite_por_combo:
+            break
 
-        negocios = llamar_api(query, LIMIT_POR_LLAMADA, offset, cancel_event=cancel_event)
+        negocios = llamar_api(query, page_size, offset, cancel_event=cancel_event)
 
         if not negocios:
             break
+        fetched_this_combo += len(negocios)
 
         nuevos = []
         for n in negocios:
@@ -312,10 +327,10 @@ def scrape_combinacion(localidad, categoria, provincia, archivo_csv, seen_ids, l
                     # Mirror failure must never break the scrape itself.
                     print(f"      ⚠️  on_new_rows hook failed: {e}", flush=True)
 
-        if len(negocios) < LIMIT_POR_LLAMADA:
+        if len(negocios) < page_size:
             break
 
-        offset += LIMIT_POR_LLAMADA
+        offset += page_size
         if _interruptible_sleep(DELAY_SEGUNDOS, cancel_event):
             break
 

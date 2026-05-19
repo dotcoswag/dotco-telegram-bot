@@ -32,7 +32,7 @@ def _make_fake_scrape_combinacion(return_rows_per_call):
     calls = {"n": 0}
 
     def fake(localidad, categoria, provincia, archivo_csv, seen_ids, limite_total,
-             min_score=0, cancel_event=None, on_new_rows=None):
+             min_score=0, cancel_event=None, on_new_rows=None, limite_por_combo=None):
         calls["n"] += 1
         if calls["n"] > 1:
             return (0, 0, 0)  # subsequent combos return nothing new
