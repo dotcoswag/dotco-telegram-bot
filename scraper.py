@@ -103,7 +103,15 @@ def calcular_lead_score(negocio, contactos, email_principal):
     return score
 
 
-def llamar_api(query, limit, pagina_offset, max_retries=3):
+def _interruptible_sleep(seconds, cancel_event):
+    """Sleep that returns early if cancel_event is set. Returns True iff cancelled."""
+    if cancel_event is None:
+        time.sleep(seconds)
+        return False
+    return cancel_event.wait(timeout=seconds)
+
+
+def llamar_api(query, limit, pagina_offset, max_retries=3, cancel_event=None):
     params = {
         "query": query,
         "limit": limit,
@@ -115,6 +123,8 @@ def llamar_api(query, limit, pagina_offset, max_retries=3):
     }
 
     for attempt in range(max_retries + 1):
+        if cancel_event is not None and cancel_event.is_set():
+            return []
         try:
             resp = requests.get(URL, headers=HEADERS, params=params, timeout=30)
 
@@ -132,7 +142,8 @@ def llamar_api(query, limit, pagina_offset, max_retries=3):
                 wait_time = int(resp.headers.get("Retry-After", 30))
                 if attempt < max_retries:
                     print(f"      ⏳ Rate limited (429). Waiting {wait_time}s before retry...", flush=True)
-                    time.sleep(wait_time)
+                    if _interruptible_sleep(wait_time, cancel_event):
+                        return []
                     continue
                 else:
                     print(f"      ⚠️  Rate limited after {max_retries} retries. Skipping.", flush=True)
@@ -145,18 +156,20 @@ def llamar_api(query, limit, pagina_offset, max_retries=3):
         except requests.exceptions.HTTPError as e:
             if attempt < max_retries:
                 wait_time = 2 ** attempt
-                print(f"      ⚠️  HTTP Error {resp.status_code}. Retry {attempt+1}/{max_retries} in {wait_time}s...")
-                time.sleep(wait_time)
+                print(f"      ⚠️  HTTP Error {resp.status_code}. Retry {attempt+1}/{max_retries} in {wait_time}s...", flush=True)
+                if _interruptible_sleep(wait_time, cancel_event):
+                    return []
             else:
-                print(f"      ⚠️  HTTP Error {resp.status_code} after {max_retries} retries: {e}")
+                print(f"      ⚠️  HTTP Error {resp.status_code} after {max_retries} retries: {e}", flush=True)
                 return []
         except Exception as e:
             if attempt < max_retries:
                 wait_time = 2 ** attempt
-                print(f"      ⚠️  Network error. Retry {attempt+1}/{max_retries} in {wait_time}s...")
-                time.sleep(wait_time)
+                print(f"      ⚠️  Network error. Retry {attempt+1}/{max_retries} in {wait_time}s...", flush=True)
+                if _interruptible_sleep(wait_time, cancel_event):
+                    return []
             else:
-                print(f"      ⚠️  Network error after {max_retries} retries: {e}")
+                print(f"      ⚠️  Network error after {max_retries} retries: {e}", flush=True)
                 return []
 
     return []
@@ -240,7 +253,7 @@ def guardar_en_csv_filas(filas, archivo_csv):
             writer.writerow(fila)
 
 
-def scrape_combinacion(localidad, categoria, provincia, archivo_csv, seen_ids, limite_total, min_score=0):
+def scrape_combinacion(localidad, categoria, provincia, archivo_csv, seen_ids, limite_total, min_score=0, cancel_event=None):
     query = f"{categoria} in {localidad}, {provincia}"
     offset = 0
     total_nuevos = 0
@@ -248,10 +261,12 @@ def scrape_combinacion(localidad, categoria, provincia, archivo_csv, seen_ids, l
     total_skipped_score = 0
 
     while True:
+        if cancel_event is not None and cancel_event.is_set():
+            break
         if limite_total is not None and len(seen_ids) >= limite_total:
             break
 
-        negocios = llamar_api(query, LIMIT_POR_LLAMADA, offset)
+        negocios = llamar_api(query, LIMIT_POR_LLAMADA, offset, cancel_event=cancel_event)
 
         if not negocios:
             break
@@ -280,6 +295,7 @@ def scrape_combinacion(localidad, categoria, provincia, archivo_csv, seen_ids, l
             break
 
         offset += LIMIT_POR_LLAMADA
-        time.sleep(DELAY_SEGUNDOS)
+        if _interruptible_sleep(DELAY_SEGUNDOS, cancel_event):
+            break
 
     return total_nuevos, total_duplicados, total_skipped_score

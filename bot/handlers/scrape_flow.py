@@ -17,10 +17,12 @@ from telegram.ext import (
 
 import main as scraper_main
 
-from bot import cities, config, keyboards
+from bot import api_quota, cities, config, keyboards
 from bot.job_manager import jobs
 from bot.progress import ProgressBridge
 from bot import scrape_runner
+
+import scraper as scraper_mod
 
 
 (
@@ -253,15 +255,49 @@ async def cb_min_score(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
         return ASKING_MIN_SCORE
     context.user_data["min_score"] = min_score
     limite = context.user_data["limite"]
+    num_cities = len(context.user_data["localidades"])
+    num_queries_per_city = len(context.user_data["categorias"])
+    total_combos = num_cities * num_queries_per_city
+
+    # Fetch live RapidAPI quota (off the event loop — it's a sync HTTP call).
+    loop = asyncio.get_running_loop()
+    quota = await loop.run_in_executor(None, api_quota.fetch)
+    context.user_data["quota_before"] = quota
+
+    # Each combo can return up to LIMIT_POR_LLAMADA=500 businesses (one page).
+    # In practice small-mid cities return ~20-80 per category. Show both ends.
+    max_cost = total_combos * scraper_mod.LIMIT_POR_LLAMADA
+    typical_low = total_combos * 20
+    typical_high = total_combos * 80
+    if limite is not None:
+        max_cost = min(max_cost, limite)
+        typical_high = min(typical_high, limite)
+
     summary = (
         f"Confirm run:\n"
         f"  Tier: {context.user_data['tier_label']}\n"
-        f"  Cities: {len(context.user_data['localidades'])}\n"
+        f"  Cities: {num_cities}\n"
         f"  Groups: {len(context.user_data['categorias_labels'])} "
-        f"({len(context.user_data['categorias'])} queries/city)\n"
+        f"({num_queries_per_city} queries/city)\n"
+        f"  Combos: {total_combos}\n"
         f"  Limit: {limite if limite is not None else 'unlimited'}\n"
         f"  Min score: {min_score}\n"
+        f"\n"
+        f"📊 {api_quota.summary_line(quota)}\n"
+        f"Estimated cost: ~{typical_low:,}–{typical_high:,} businesses "
+        f"(hard cap {max_cost:,}).\n"
     )
+    if quota is not None and quota["remaining"] <= 0:
+        summary += (
+            f"\n⚠️ Quota is already exhausted — the scrape will abort on the first "
+            f"call. Cancel below and upgrade your plan, or wait "
+            f"{api_quota.format_reset(quota['reset_seconds'])} for reset.\n"
+        )
+    elif quota is not None and typical_low > quota["remaining"]:
+        summary += (
+            f"\n⚠️ Even the low estimate ({typical_low:,}) exceeds remaining quota "
+            f"({quota['remaining']:,}). The scrape will likely abort partway.\n"
+        )
     await q.edit_message_text(
         summary,
         reply_markup=keyboards.yes_no_keyboard("confirm", default_no=False),
@@ -326,6 +362,14 @@ async def cb_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         f"dup: {result['total_duplicados']}, "
         f"low-score skip: {result['total_skipped_score']}"
     )
+    # Re-fetch quota to show actual delta consumed by this scrape.
+    quota_after = await loop.run_in_executor(None, api_quota.fetch)
+    quota_before = context.user_data.get("quota_before")
+    if quota_after is not None:
+        if quota_before is not None:
+            delta = quota_before["remaining"] - quota_after["remaining"]
+            summary += f"\n📊 Used by this run: {delta} businesses."
+        summary += f"\n{api_quota.summary_line(quota_after)}"
     await context.bot.send_message(chat_id, summary)
 
     if csv_path and os.path.exists(csv_path) and os.path.getsize(csv_path) > 0:

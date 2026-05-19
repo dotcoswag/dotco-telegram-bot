@@ -64,6 +64,7 @@ def run(
                 seen_ids=seen_ids,
                 limite_total=limite,
                 min_score=min_score,
+                cancel_event=cancel_event,
             )
         except QuotaExhausted as e:
             bridge.push(
