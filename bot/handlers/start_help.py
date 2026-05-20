@@ -11,6 +11,7 @@ WELCOME = (
     "  /enrich — run AI enrichment on the last scrape (opt-in, default off)\n"
     "  /export_smartlead — build a Smartlead-compatible CSV\n"
     "  /export_excel — convert the last CSV to XLSX\n"
+    "  /refine_emails — picks the best email per row from emails_extra (free)\n"
     "  /list — list result files on the server\n"
     "  /status — show the running job\n"
     "  /cancel — request cancellation of the running job\n"

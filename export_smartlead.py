@@ -41,8 +41,12 @@ def to_smartlead_row(row, include_opener):
     first_name_ai = (row.get("first_name_ai") or "").strip()
     first_name = first_name_ai if first_name_ai else DEFAULT_FIRST_NAME
 
+    # Prefer best_email when /refine_emails has been run on this CSV;
+    # fall back to the API's primary email otherwise.
+    email = (row.get("best_email") or row.get("email") or "").strip()
+
     out = {
-        "email": row.get("email", "").strip(),
+        "email": email,
         "first_name": first_name,
         "last_name": "",
         "company_name": row.get("nombre", "").strip(),
@@ -93,7 +97,8 @@ def export(input_csv, min_score=0, require_qualified=False):
         for row in reader:
             total += 1
 
-            email = (row.get("email") or "").strip()
+            # Match the precedence used by to_smartlead_row.
+            email = (row.get("best_email") or row.get("email") or "").strip()
             if not email:
                 no_email += 1
                 continue

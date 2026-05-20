@@ -14,7 +14,7 @@ from telegram.ext import Application
 
 from bot import config
 from bot.handlers import enrich as enrich_handler
-from bot.handlers import db_cmds, export_cmds, job_control, quota_status, scrape_flow, start_help
+from bot.handlers import db_cmds, export_cmds, job_control, quota_status, refine_emails, scrape_flow, start_help
 
 
 # Commands shown in Telegram's native "/" menu (tap the / icon next to the input).
@@ -29,6 +29,7 @@ BOT_COMMANDS: list[tuple[str, str]] = [
     ("list",                "📂 List recent result files on the server"),
     ("export_smartlead",    "📧 Smartlead CSV from the last scrape"),
     ("export_excel",        "📊 XLSX from the last scrape"),
+    ("refine_emails",       "🎯 Pick best email per row from extras (free, no AI)"),
     ("enrich",              "🤖 AI-enrich the last CSV (opt-in, cost preview)"),
     ("status",              "⏱  Show the running job"),
     ("cancel",              "🛑 Cancel the running job"),
@@ -63,6 +64,7 @@ def build_application() -> Application:
     job_control.register(app)
     quota_status.register(app)
     db_cmds.register(app)
+    refine_emails.register(app)
     return app
 
 
