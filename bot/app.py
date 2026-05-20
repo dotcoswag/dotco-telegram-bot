@@ -25,6 +25,7 @@ BOT_COMMANDS: list[tuple[str, str]] = [
     ("db_stats",            "🗄️ Master DB totals — by state, category, score"),
     ("db_export",           "📤 Export a filtered subset of the master DB → CSV"),
     ("db_export_smartlead", "📧 Same filters → Smartlead-format CSV"),
+    ("db_refine_domains",   "🌐 Add domain age, registrar, MX provider (free, ~1/sec)"),
     ("db_pull",             "🔄 Force re-fetch master DB from GitHub"),
     ("list",                "📂 List recent result files on the server"),
     ("export_smartlead",    "📧 Smartlead CSV from the last scrape"),

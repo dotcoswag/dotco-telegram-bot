@@ -7,6 +7,8 @@ inline keyboards. Per-chat state lives in context.user_data.
 import asyncio
 import os
 import tempfile
+import threading
+import time
 from datetime import datetime
 
 from telegram import Update
@@ -14,9 +16,12 @@ from telegram.ext import CallbackQueryHandler, CommandHandler, ContextTypes
 
 import export_smartlead
 
-from bot import cities, config, keyboards, leads_db
+from bot import cities, config, domain_enricher, keyboards, leads_db
 from bot.github_storage import StorageError
 from bot.job_manager import jobs
+
+
+_DOMAIN_LOOKUP_DELAY = 1.0  # be polite to rdap.org / DNS resolvers
 
 
 # ── /db_stats ────────────────────────────────────────────────
@@ -217,15 +222,123 @@ async def cmd_db_pull(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         return
     loop = asyncio.get_running_loop()
     try:
-        master_rows, log_rows = await loop.run_in_executor(None, leads_db.force_pull)
+        master_rows, log_rows, domain_rows = await loop.run_in_executor(
+            None, leads_db.force_pull
+        )
     except StorageError as e:
         await update.message.reply_text(f"⚠️ Pull failed: {e}")
         return
     await update.message.reply_text(
         f"🔄 Pulled from GitHub.\n"
         f"  Master rows: {master_rows:,}\n"
-        f"  Combo log rows: {log_rows:,}"
+        f"  Combo log rows: {log_rows:,}\n"
+        f"  Domain enrichment rows: {domain_rows:,}"
     )
+
+
+# ── /db_refine_domains ───────────────────────────────────────
+
+def _enrich_domains_worker(bridge, cancel_event: threading.Event) -> dict:
+    """Run on the executor; iterates unique master domains and enriches missing
+    ones via domain_enricher. Returns a summary dict."""
+    leads_db.ensure_loaded()
+    all_domains = leads_db.domains_in_master()
+    todo = [d for d in all_domains if d not in leads_db.DOMAIN_INFO]
+    bridge.push(
+        f"🌐 {len(all_domains)} unique domains in master · "
+        f"{len(todo)} need enrichment · "
+        f"{len(all_domains) - len(todo)} already cached",
+        force=True,
+    )
+    if not todo:
+        return {"total": len(all_domains), "looked_up": 0, "cached": len(all_domains),
+                "failed": 0, "cancelled": False}
+
+    looked_up = 0
+    failed = 0
+    flush_every = 25  # checkpoint to GitHub periodically
+    start = time.time()
+
+    for i, domain in enumerate(todo, start=1):
+        if cancel_event.is_set():
+            try:
+                leads_db.flush_domain_info()
+            except Exception:
+                pass
+            return {"total": len(all_domains), "looked_up": looked_up,
+                    "cached": len(all_domains) - len(todo),
+                    "failed": failed, "cancelled": True}
+        try:
+            info = domain_enricher.enrich_domain(domain)
+            leads_db.upsert_domain_info(info)
+            looked_up += 1
+            if info.get("registrar") or info.get("mx_provider") not in ("", "none"):
+                pass  # success
+            else:
+                failed += 1
+        except Exception:
+            failed += 1
+
+        if i % 10 == 0 or i == len(todo):
+            elapsed = int(time.time() - start)
+            bridge.push(
+                f"[{i}/{len(todo)}] enriched · {failed} no-data · {elapsed}s elapsed"
+            )
+        if i % flush_every == 0:
+            try:
+                leads_db.flush_domain_info()
+            except Exception:
+                pass
+        # Throttle so we don't hammer rdap.org or the DNS resolvers.
+        if cancel_event.wait(timeout=_DOMAIN_LOOKUP_DELAY):
+            return {"total": len(all_domains), "looked_up": looked_up,
+                    "cached": len(all_domains) - len(todo),
+                    "failed": failed, "cancelled": True}
+
+    try:
+        leads_db.flush_domain_info()
+    except Exception:
+        pass
+    return {"total": len(all_domains), "looked_up": looked_up,
+            "cached": len(all_domains) - len(todo),
+            "failed": failed, "cancelled": False}
+
+
+async def cmd_db_refine_domains(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    chat_id = update.effective_chat.id
+    if jobs.current is not None:
+        await update.message.reply_text(
+            "Another job is running — wait for it to finish or /cancel it first."
+        )
+        return
+    job = await jobs.try_acquire(chat_id, "refine_domains")
+    if job is None:
+        await update.message.reply_text("Couldn't acquire lock.")
+        return
+
+    from bot.progress import ProgressBridge
+    loop = asyncio.get_running_loop()
+    bridge = ProgressBridge(loop, context.bot, chat_id)
+    try:
+        result = await loop.run_in_executor(
+            None, _enrich_domains_worker, bridge, job.cancel_event
+        )
+    except Exception as e:
+        await context.bot.send_message(chat_id, f"❌ Enrich failed: {e}")
+        await jobs.release()
+        return
+
+    status = "🛑 Cancelled" if result["cancelled"] else "✅ Done"
+    await context.bot.send_message(
+        chat_id,
+        f"{status}\n"
+        f"  Total domains: {result['total']:,}\n"
+        f"  Looked up this run: {result['looked_up']:,}\n"
+        f"  Already cached: {result['cached']:,}\n"
+        f"  No data returned: {result['failed']:,}\n\n"
+        f"/db_export* now includes columns: domain_age_years, registrar, mx_provider"
+    )
+    await jobs.release()
 
 
 def register(application) -> None:
@@ -233,6 +346,7 @@ def register(application) -> None:
     application.add_handler(CommandHandler("db_export", cmd_db_export))
     application.add_handler(CommandHandler("db_export_smartlead", cmd_db_export_smartlead))
     application.add_handler(CommandHandler("db_pull", cmd_db_pull))
+    application.add_handler(CommandHandler("db_refine_domains", cmd_db_refine_domains))
     application.add_handler(CallbackQueryHandler(cb_dbexport_state, pattern=r"^dbstate\|"))
     application.add_handler(CallbackQueryHandler(cb_dbexport_group, pattern=r"^dbgrp\|"))
     application.add_handler(CallbackQueryHandler(cb_dbexport_score, pattern=r"^dbscore\|"))

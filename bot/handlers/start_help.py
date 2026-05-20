@@ -22,6 +22,7 @@ WELCOME = (
     "  /db_stats — totals, by state, by category, score histogram\n"
     "  /db_export — filter (state → group → min_score) → CSV\n"
     "  /db_export_smartlead — same filters → Smartlead CSV\n"
+    "  /db_refine_domains — free enrichment: domain age + MX provider + registrar\n"
     "  /db_pull — force re-fetch master from GitHub\n"
     "\n"
     "  /help — show this message\n\n"

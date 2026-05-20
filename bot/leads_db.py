@@ -19,8 +19,11 @@ from bot import config, github_storage
 
 MASTER_PATH = "data/master_leads.csv"
 SCRAPE_LOG_PATH = "data/scrape_log.csv"
+DOMAIN_ENRICH_PATH = "data/domain_enrichment.csv"
 
 LOG_COLUMNS = ["localidad", "provincia", "categoria", "last_scraped_at_iso", "returned_count"]
+DOMAIN_COLUMNS = ["domain", "domain_age_years", "registrar",
+                  "mx_provider", "mx_hosts", "last_checked_iso"]
 
 
 # ── module state ─────────────────────────────────────────────
@@ -29,6 +32,8 @@ _lock = threading.Lock()
 _loaded = False
 MASTER: dict[str, dict] = {}
 SCRAPE_LOG: dict[tuple[str, str, str], dict] = {}
+# domain → row dict (DOMAIN_COLUMNS). Populated by /db_refine_domains.
+DOMAIN_INFO: dict[str, dict] = {}
 # Secondary index — normalized_phone → business_id. Lets add_rows reject a
 # row whose phone matches an existing master entry under a different
 # business_id (RapidAPI sometimes returns the same business with two
@@ -36,6 +41,7 @@ SCRAPE_LOG: dict[tuple[str, str, str], dict] = {}
 PHONE_INDEX: dict[str, str] = {}
 _master_sha: Optional[str] = None
 _log_sha: Optional[str] = None
+_domain_sha: Optional[str] = None
 _dirty_count = 0
 
 
@@ -53,13 +59,14 @@ def _normalize_phone(phone: str) -> str:
 # ── load / save ──────────────────────────────────────────────
 
 def ensure_loaded() -> None:
-    """Lazy-load both files from storage on first call."""
-    global _loaded, _master_sha, _log_sha
+    """Lazy-load all three files from storage on first call."""
+    global _loaded, _master_sha, _log_sha, _domain_sha
     with _lock:
         if _loaded:
             return
         master_bytes, _master_sha = github_storage.get_file(MASTER_PATH)
         log_bytes, _log_sha = github_storage.get_file(SCRAPE_LOG_PATH)
+        domain_bytes, _domain_sha = github_storage.get_file(DOMAIN_ENRICH_PATH)
         if master_bytes:
             for row in csv.DictReader(io.StringIO(master_bytes.decode("utf-8"))):
                 bid = row.get("business_id") or ""
@@ -72,19 +79,25 @@ def ensure_loaded() -> None:
             for row in csv.DictReader(io.StringIO(log_bytes.decode("utf-8"))):
                 key = (row.get("localidad", ""), row.get("provincia", ""), row.get("categoria", ""))
                 SCRAPE_LOG[key] = row
+        if domain_bytes:
+            for row in csv.DictReader(io.StringIO(domain_bytes.decode("utf-8"))):
+                d = (row.get("domain") or "").strip().lower()
+                if d:
+                    DOMAIN_INFO[d] = row
         _loaded = True
 
 
-def force_pull() -> tuple[int, int]:
-    """Discard in-memory state and re-fetch both files. Returns (master_rows, log_rows)."""
+def force_pull() -> tuple[int, int, int]:
+    """Discard in-memory state and re-fetch all files. Returns (master_rows, log_rows, domain_rows)."""
     global _loaded
     with _lock:
         MASTER.clear()
         SCRAPE_LOG.clear()
+        DOMAIN_INFO.clear()
         PHONE_INDEX.clear()
         _loaded = False
     ensure_loaded()
-    return len(MASTER), len(SCRAPE_LOG)
+    return len(MASTER), len(SCRAPE_LOG), len(DOMAIN_INFO)
 
 
 def _serialize_master() -> bytes:
@@ -105,29 +118,45 @@ def _serialize_log() -> bytes:
     return buf.getvalue().encode("utf-8")
 
 
+def _serialize_domain_info() -> bytes:
+    buf = io.StringIO()
+    writer = csv.DictWriter(buf, fieldnames=DOMAIN_COLUMNS, extrasaction="ignore")
+    writer.writeheader()
+    for row in DOMAIN_INFO.values():
+        writer.writerow(row)
+    return buf.getvalue().encode("utf-8")
+
+
 def flush() -> None:
-    """Push both files back to storage. Idempotent. Resets dirty counter on success."""
+    """Push master + scrape_log to storage. Idempotent. Resets dirty counter."""
     global _master_sha, _log_sha, _dirty_count
     ensure_loaded()
     with _lock:
         master_bytes = _serialize_master()
         log_bytes = _serialize_log()
         ts = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
-        # Master push
         _master_sha = github_storage.put_file(
-            MASTER_PATH,
-            master_bytes,
-            _master_sha,
+            MASTER_PATH, master_bytes, _master_sha,
             f"bot: master_leads update ({len(MASTER)} rows) {ts}",
         )
-        # Log push
         _log_sha = github_storage.put_file(
-            SCRAPE_LOG_PATH,
-            log_bytes,
-            _log_sha,
+            SCRAPE_LOG_PATH, log_bytes, _log_sha,
             f"bot: scrape_log update ({len(SCRAPE_LOG)} combos) {ts}",
         )
         _dirty_count = 0
+
+
+def flush_domain_info() -> None:
+    """Push the domain enrichment side-table to storage."""
+    global _domain_sha
+    ensure_loaded()
+    with _lock:
+        data = _serialize_domain_info()
+        ts = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+        _domain_sha = github_storage.put_file(
+            DOMAIN_ENRICH_PATH, data, _domain_sha,
+            f"bot: domain_enrichment update ({len(DOMAIN_INFO)} domains) {ts}",
+        )
 
 
 # ── public API used by the scrape pipeline ───────────────────
@@ -263,24 +292,62 @@ def filter_rows(state: Optional[str] = None,
 
 
 def write_filtered_csv(path: str, **filters) -> int:
-    """Write the filtered rows to a CSV at `path`. Returns row count."""
+    """Write the filtered rows to a CSV at `path`. Returns row count.
+
+    Joins DOMAIN_INFO columns (domain_age_years, registrar, mx_provider) onto
+    each row when the lead's website domain has been enriched. Missing values
+    come out as empty strings.
+    """
+    from bot.domain_enricher import extract_domain
     rows = list(filter_rows(**filters))
+    # Output columns = master columns + the domain enrichment columns
+    extra_cols = ["domain", "domain_age_years", "registrar", "mx_provider"]
+    output_cols = list(scraper_mod.COLUMNAS_CSV) + extra_cols
     with open(path, "w", encoding="utf-8", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=scraper_mod.COLUMNAS_CSV, extrasaction="ignore")
+        writer = csv.DictWriter(f, fieldnames=output_cols, extrasaction="ignore")
         writer.writeheader()
         for row in rows:
-            writer.writerow(row)
+            domain = extract_domain(row.get("website", ""))
+            info = DOMAIN_INFO.get(domain, {}) if domain else {}
+            enriched = dict(row)
+            enriched["domain"] = domain
+            enriched["domain_age_years"] = info.get("domain_age_years", "")
+            enriched["registrar"] = info.get("registrar", "")
+            enriched["mx_provider"] = info.get("mx_provider", "")
+            writer.writerow(enriched)
     return len(rows)
+
+
+def domains_in_master() -> set[str]:
+    """All unique website domains across the master DB."""
+    from bot.domain_enricher import extract_domain
+    out: set[str] = set()
+    for row in MASTER.values():
+        d = extract_domain(row.get("website", ""))
+        if d:
+            out.add(d)
+    return out
+
+
+def upsert_domain_info(info: dict) -> None:
+    """Add/replace a row in DOMAIN_INFO. info must include 'domain' key."""
+    d = (info.get("domain") or "").strip().lower()
+    if not d:
+        return
+    with _lock:
+        DOMAIN_INFO[d] = dict(info)
 
 
 def _reset_for_tests() -> None:
     """Clears all module state. Tests use this in setup/teardown."""
-    global _loaded, _master_sha, _log_sha, _dirty_count
+    global _loaded, _master_sha, _log_sha, _domain_sha, _dirty_count
     with _lock:
         MASTER.clear()
         SCRAPE_LOG.clear()
+        DOMAIN_INFO.clear()
         PHONE_INDEX.clear()
         _loaded = False
         _master_sha = None
         _log_sha = None
+        _domain_sha = None
         _dirty_count = 0

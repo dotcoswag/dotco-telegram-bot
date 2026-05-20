@@ -3,4 +3,5 @@ python-dotenv
 openpyxl
 anthropic
 python-telegram-bot[webhooks]>=21.0
+dnspython>=2.0
 
