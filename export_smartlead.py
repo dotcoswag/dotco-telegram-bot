@@ -32,6 +32,27 @@ BASE_COLUMNS = [
 
 DEFAULT_FIRST_NAME = "Team"
 
+# Free / personal email providers — DON'T dedup by these domains since
+# many small business owners use a personal Gmail for the business.
+FREE_EMAIL_DOMAINS = {
+    "gmail.com", "yahoo.com", "yahoo.es", "hotmail.com", "outlook.com",
+    "live.com", "icloud.com", "me.com", "aol.com", "msn.com",
+    "protonmail.com", "proton.me", "gmx.com", "yandex.com",
+}
+
+
+def _email_domain(email: str) -> str:
+    if not email or "@" not in email:
+        return ""
+    return email.rsplit("@", 1)[1].strip().lower()
+
+
+def _score_for_domain_dedup(row: dict) -> int:
+    try:
+        return int(row.get("lead_score", 0))
+    except (ValueError, TypeError):
+        return 0
+
 
 def to_smartlead_row(row, include_opener):
     city = row.get("city", "").strip()
@@ -60,7 +81,14 @@ def to_smartlead_row(row, include_opener):
     return out
 
 
-def export(input_csv, min_score=0, require_qualified=False):
+def export(input_csv, min_score=0, require_qualified=False, dedup_by_domain=True):
+    """Convert a scraper CSV → Smartlead-compatible CSV.
+
+    `dedup_by_domain`: when True (default), keep at most one row per
+    business-email domain (highest lead_score wins). Free providers
+    (gmail.com, yahoo, etc.) are exempt — they're treated as personal
+    accounts, not company domains, so all rows pass through.
+    """
     if not os.path.exists(input_csv):
         print(f"ERROR: file not found: {input_csv}")
         sys.exit(1)
@@ -86,23 +114,21 @@ def export(input_csv, min_score=0, require_qualified=False):
     no_email = 0
     below_score = 0
     disqualified = 0
-    written = 0
+    domain_dupes = 0
 
-    with open(input_csv, encoding="utf-8") as fin, \
-         open(output_csv, "w", encoding="utf-8", newline="") as fout:
+    # First pass: filter rows + collect winners keyed by business-domain.
+    # Free-provider domains (gmail, yahoo, etc.) skip the bucket entirely.
+    domain_winner: dict[str, dict] = {}
+    free_rows: list[dict] = []  # untouched by domain dedup
+
+    with open(input_csv, encoding="utf-8") as fin:
         reader = csv.DictReader(fin)
-        writer = csv.DictWriter(fout, fieldnames=output_columns)
-        writer.writeheader()
-
         for row in reader:
             total += 1
-
-            # Match the precedence used by to_smartlead_row.
             email = (row.get("best_email") or row.get("email") or "").strip()
             if not email:
                 no_email += 1
                 continue
-
             try:
                 score = int(row.get("lead_score", 0))
             except ValueError:
@@ -110,11 +136,28 @@ def export(input_csv, min_score=0, require_qualified=False):
             if score < min_score:
                 below_score += 1
                 continue
-
             if require_qualified and (row.get("ai_qualified", "").strip().lower() == "false"):
                 disqualified += 1
                 continue
+            domain = _email_domain(email)
+            if dedup_by_domain and domain and domain not in FREE_EMAIL_DOMAINS:
+                prev = domain_winner.get(domain)
+                if prev is None:
+                    domain_winner[domain] = row
+                elif _score_for_domain_dedup(row) > _score_for_domain_dedup(prev):
+                    domain_winner[domain] = row
+                    domain_dupes += 1
+                else:
+                    domain_dupes += 1
+            else:
+                free_rows.append(row)
 
+    # Second pass: write the survivors.
+    written = 0
+    with open(output_csv, "w", encoding="utf-8", newline="") as fout:
+        writer = csv.DictWriter(fout, fieldnames=output_columns)
+        writer.writeheader()
+        for row in list(domain_winner.values()) + free_rows:
             writer.writerow(to_smartlead_row(row, include_opener))
             written += 1
 
@@ -125,6 +168,8 @@ def export(input_csv, min_score=0, require_qualified=False):
         print(f"  skipped (score < {min_score})        : {below_score}")
     if require_qualified:
         print(f"  skipped (ai_qualified=false): {disqualified}")
+    if dedup_by_domain:
+        print(f"  collapsed by domain         : {domain_dupes}")
     print(f"  written                     : {written}")
     if include_opener:
         print(f"  personalized_opener column  : included")

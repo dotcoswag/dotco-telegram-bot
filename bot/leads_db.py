@@ -8,6 +8,7 @@ Scrape log schema (4 cols, separate file):
 
 import csv
 import io
+import re
 import threading
 from datetime import datetime, timezone
 from typing import Iterable, Iterator, Optional
@@ -28,9 +29,25 @@ _lock = threading.Lock()
 _loaded = False
 MASTER: dict[str, dict] = {}
 SCRAPE_LOG: dict[tuple[str, str, str], dict] = {}
+# Secondary index — normalized_phone → business_id. Lets add_rows reject a
+# row whose phone matches an existing master entry under a different
+# business_id (RapidAPI sometimes returns the same business with two
+# different place_ids).
+PHONE_INDEX: dict[str, str] = {}
 _master_sha: Optional[str] = None
 _log_sha: Optional[str] = None
 _dirty_count = 0
+
+
+def _normalize_phone(phone: str) -> str:
+    """US-friendly canonical form: strip everything non-digit, drop leading 1."""
+    if not phone:
+        return ""
+    digits = re.sub(r"\D", "", phone)
+    if len(digits) == 11 and digits.startswith("1"):
+        digits = digits[1:]
+    # Anything less than 10 digits is too ambiguous to use as a dedup key.
+    return digits if len(digits) >= 10 else ""
 
 
 # ── load / save ──────────────────────────────────────────────
@@ -48,6 +65,9 @@ def ensure_loaded() -> None:
                 bid = row.get("business_id") or ""
                 if bid:
                     MASTER[bid] = row
+                    p = _normalize_phone(row.get("telefono", ""))
+                    if p and p not in PHONE_INDEX:
+                        PHONE_INDEX[p] = bid
         if log_bytes:
             for row in csv.DictReader(io.StringIO(log_bytes.decode("utf-8"))):
                 key = (row.get("localidad", ""), row.get("provincia", ""), row.get("categoria", ""))
@@ -61,6 +81,7 @@ def force_pull() -> tuple[int, int]:
     with _lock:
         MASTER.clear()
         SCRAPE_LOG.clear()
+        PHONE_INDEX.clear()
         _loaded = False
     ensure_loaded()
     return len(MASTER), len(SCRAPE_LOG)
@@ -117,7 +138,8 @@ def business_ids() -> set[str]:
 
 
 def add_rows(rows: Iterable[dict]) -> int:
-    """Add rows to MASTER (dedup by business_id, first-write-wins). Returns added count.
+    """Add rows to MASTER. Dedups by business_id AND by normalized phone.
+    First-write-wins. Returns added count.
 
     Triggers an auto-flush once dirty count crosses `MASTER_FLUSH_EVERY_N`.
     """
@@ -129,7 +151,14 @@ def add_rows(rows: Iterable[dict]) -> int:
             bid = (row.get("business_id") or "").strip()
             if not bid or bid in MASTER:
                 continue
+            phone = _normalize_phone(row.get("telefono", ""))
+            if phone and phone in PHONE_INDEX:
+                # Same phone, different business_id — most likely RapidAPI
+                # returned a duplicate listing. Skip without overwriting.
+                continue
             MASTER[bid] = dict(row)
+            if phone:
+                PHONE_INDEX[phone] = bid
             added += 1
             _dirty_count += 1
     if _dirty_count >= config.MASTER_FLUSH_EVERY_N:
@@ -250,6 +279,7 @@ def _reset_for_tests() -> None:
     with _lock:
         MASTER.clear()
         SCRAPE_LOG.clear()
+        PHONE_INDEX.clear()
         _loaded = False
         _master_sha = None
         _log_sha = None
