@@ -144,15 +144,31 @@ async def cb_dbexport_score(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     context.user_data["dbexport_min_score"] = min_score
     mode = context.user_data.get("dbexport_mode", "csv")
 
-    # For Smartlead mode, chain two more pickers (domain-level filters).
+    # For Smartlead mode, the next two steps depend on domain enrichment.
+    # If /db_refine_domains hasn't been run, skip them entirely and warn.
     # For raw CSV export, run immediately.
     if mode == "smartlead":
+        total_domains = len(leads_db.domains_in_master())
+        enriched = len(leads_db.DOMAIN_INFO)
+        if enriched == 0:
+            chat_id = q.message.chat_id
+            await q.edit_message_text(
+                f"Min score: {min_score}\n\n"
+                f"ℹ️ Domain enrichment hasn't been run yet "
+                f"(0/{total_domains} domains enriched). Skipping the "
+                f"`min_domain_age` and `mx_provider` filter steps.\n\n"
+                f"Run /db_refine_domains first if you want those filters."
+            )
+            # No domain filters → run export directly with the score/state/group already collected.
+            await _run_export(context, q)
+            return
+        coverage_pct = int(enriched / total_domains * 100) if total_domains else 0
         await q.edit_message_text(
-            "Min score: " + str(min_score) + "\n\n"
-            "Step 4/5 — minimum domain age filter.\n"
-            "Filters out brand-new businesses (websites <N years old). "
-            "Leads without enrichment data are excluded when this is set — "
-            "run /db_refine_domains first to populate it.",
+            f"Min score: {min_score}\n"
+            f"Domain enrichment coverage: {enriched:,}/{total_domains:,} ({coverage_pct}%)\n\n"
+            f"Step 4/5 — minimum domain age filter.\n"
+            f"Filters out brand-new businesses (websites <N years old).\n"
+            f"Leads without enrichment data are excluded when this filter is active.",
             reply_markup=keyboards.domain_age_keyboard(prefix="dbage"),
         )
     else:
