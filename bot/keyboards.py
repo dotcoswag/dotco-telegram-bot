@@ -152,6 +152,42 @@ def group_picker_keyboard(prefix: str = "dbgrp", include_all: bool = True) -> In
     return InlineKeyboardMarkup(rows)
 
 
+DOMAIN_AGE_OPTIONS = (
+    ("any", "🌐 Any age"),
+    ("1", "1+ year"),
+    ("3", "3+ years"),
+    ("5", "5+ years"),
+    ("10", "10+ years"),
+)
+
+
+def domain_age_keyboard(prefix: str = "dbage") -> InlineKeyboardMarkup:
+    rows = [
+        [InlineKeyboardButton(label, callback_data=f"{prefix}|{value}")]
+        for value, label in DOMAIN_AGE_OPTIONS
+    ]
+    rows.append([InlineKeyboardButton("✖ Cancel", callback_data="cancel|")])
+    return InlineKeyboardMarkup(rows)
+
+
+MX_FILTER_OPTIONS = (
+    ("any", "🌐 Any (no filter)"),
+    ("professional", "🏢 Professional only (Google Workspace / M365)"),
+    ("has_mx", "📬 Has any mail server"),
+    ("google_workspace", "Google Workspace only"),
+    ("microsoft365", "Microsoft 365 only"),
+)
+
+
+def mx_provider_keyboard(prefix: str = "dbmx") -> InlineKeyboardMarkup:
+    rows = [
+        [InlineKeyboardButton(label, callback_data=f"{prefix}|{value}")]
+        for value, label in MX_FILTER_OPTIONS
+    ]
+    rows.append([InlineKeyboardButton("✖ Cancel", callback_data="cancel|")])
+    return InlineKeyboardMarkup(rows)
+
+
 FEATURE_KEYS = ("first_name", "opener", "qualify")
 
 

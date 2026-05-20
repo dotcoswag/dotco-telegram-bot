@@ -141,11 +141,65 @@ async def cb_dbexport_score(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     except ValueError:
         await q.edit_message_text("Invalid choice.")
         return
+    context.user_data["dbexport_min_score"] = min_score
+    mode = context.user_data.get("dbexport_mode", "csv")
 
+    # For Smartlead mode, chain two more pickers (domain-level filters).
+    # For raw CSV export, run immediately.
+    if mode == "smartlead":
+        await q.edit_message_text(
+            "Min score: " + str(min_score) + "\n\n"
+            "Step 4/5 — minimum domain age filter.\n"
+            "Filters out brand-new businesses (websites <N years old). "
+            "Leads without enrichment data are excluded when this is set — "
+            "run /db_refine_domains first to populate it.",
+            reply_markup=keyboards.domain_age_keyboard(prefix="dbage"),
+        )
+    else:
+        await _run_export(context, q)
+
+
+async def cb_dbexport_age(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    q = update.callback_query
+    await q.answer()
+    _, value = q.data.split("|", 1)
+    if value == "any":
+        context.user_data["dbexport_min_age"] = 0
+        age_label = "any"
+    else:
+        try:
+            context.user_data["dbexport_min_age"] = int(value)
+            age_label = f"{value}+ years"
+        except ValueError:
+            await q.edit_message_text("Invalid choice.")
+            return
+    await q.edit_message_text(
+        f"Min domain age: {age_label}\n\n"
+        f"Step 5/5 — mail-provider filter.\n"
+        f"'Professional only' keeps just Google Workspace or Microsoft 365 — "
+        f"those leads are most likely to read business emails.",
+        reply_markup=keyboards.mx_provider_keyboard(prefix="dbmx"),
+    )
+
+
+async def cb_dbexport_mx(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    q = update.callback_query
+    await q.answer()
+    _, value = q.data.split("|", 1)
+    context.user_data["dbexport_mx_filter"] = None if value == "any" else value
+    await _run_export(context, q)
+
+
+async def _run_export(context: ContextTypes.DEFAULT_TYPE, q) -> None:
+    """Shared between /db_export (after min_score) and /db_export_smartlead
+    (after the mx step). Reads accumulated state from user_data."""
     chat_id = q.message.chat_id
     mode = context.user_data.pop("dbexport_mode", "csv")
     state = context.user_data.pop("dbexport_state", None)
     group = context.user_data.pop("dbexport_group", None)
+    min_score = context.user_data.pop("dbexport_min_score", 0)
+    min_age = context.user_data.pop("dbexport_min_age", 0)
+    mx_filter = context.user_data.pop("dbexport_mx_filter", None)
 
     loop = asyncio.get_running_loop()
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -156,14 +210,24 @@ async def cb_dbexport_score(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         f"dbexport_{tag_state}_{tag_group}_score{min_score}_{ts}.csv",
     )
 
-    await q.edit_message_text(
-        f"Filtering master DB…\n  state: {state or 'all'}\n  group: {group or 'all'}\n  min_score: {min_score}"
+    filter_summary = (
+        f"  state: {state or 'all'}\n  group: {group or 'all'}\n"
+        f"  min_score: {min_score}"
     )
+    if min_age > 0:
+        filter_summary += f"\n  min_domain_age: {min_age}+ yrs"
+    if mx_filter:
+        filter_summary += f"\n  mx_filter: {mx_filter}"
+    await q.edit_message_text(f"Filtering master DB…\n{filter_summary}")
+
     try:
         count = await loop.run_in_executor(
             None,
             lambda: leads_db.write_filtered_csv(
-                raw_path, state=state, category_group=group, min_score=min_score
+                raw_path,
+                include_enrichment_columns=(mode != "smartlead"),
+                state=state, category_group=group, min_score=min_score,
+                min_domain_age=min_age, mx_filter=mx_filter,
             ),
         )
     except Exception as e:
@@ -208,7 +272,6 @@ async def cb_dbexport_score(update: Update, context: ContextTypes.DEFAULT_TYPE) 
             filename=os.path.basename(deliver),
             caption=label,
         )
-    # Track for /export_smartlead-style follow-up if user wants to re-filter.
     jobs.set_last_result(chat_id, raw_path)
 
 
@@ -350,3 +413,5 @@ def register(application) -> None:
     application.add_handler(CallbackQueryHandler(cb_dbexport_state, pattern=r"^dbstate\|"))
     application.add_handler(CallbackQueryHandler(cb_dbexport_group, pattern=r"^dbgrp\|"))
     application.add_handler(CallbackQueryHandler(cb_dbexport_score, pattern=r"^dbscore\|"))
+    application.add_handler(CallbackQueryHandler(cb_dbexport_age, pattern=r"^dbage\|"))
+    application.add_handler(CallbackQueryHandler(cb_dbexport_mx, pattern=r"^dbmx\|"))

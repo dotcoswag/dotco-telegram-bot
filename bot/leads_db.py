@@ -270,13 +270,49 @@ def stats() -> dict:
 
 def filter_rows(state: Optional[str] = None,
                 category_group: Optional[str] = None,
-                min_score: int = 0) -> Iterator[dict]:
-    """Yield rows matching the filters. category_group expects a key from main.CATEGORIAS."""
+                min_score: int = 0,
+                min_domain_age: int = 0,
+                mx_filter: Optional[str] = None) -> Iterator[dict]:
+    """Yield rows matching the filters. category_group expects a key from main.CATEGORIAS.
+
+    Domain-level filters (`min_domain_age`, `mx_filter`) require DOMAIN_INFO to
+    be populated for that lead's website domain. Leads without enrichment data
+    are EXCLUDED when either of these filters is active — run /db_refine_domains
+    first to populate it.
+    """
     import main as scraper_main
+    from bot.domain_enricher import extract_domain
     ensure_loaded()
     group_cats: Optional[set[str]] = None
     if category_group:
         group_cats = set(scraper_main.CATEGORIAS.get(category_group, []))
+
+    def _domain_passes(row: dict) -> bool:
+        if min_domain_age <= 0 and not mx_filter:
+            return True
+        d = extract_domain(row.get("website", ""))
+        if not d:
+            return False
+        info = DOMAIN_INFO.get(d)
+        if not info:
+            return False
+        if min_domain_age > 0:
+            try:
+                age = int(info.get("domain_age_years", "") or 0)
+            except (ValueError, TypeError):
+                return False
+            if age < min_domain_age:
+                return False
+        if mx_filter:
+            mx = info.get("mx_provider", "none")
+            if mx_filter == "professional" and mx not in ("google_workspace", "microsoft365"):
+                return False
+            if mx_filter == "has_mx" and mx in ("", "none"):
+                return False
+            if mx_filter in ("google_workspace", "microsoft365") and mx != mx_filter:
+                return False
+        return True
+
     for row in MASTER.values():
         if state and (row.get("state") or row.get("provincia")) != state:
             continue
@@ -288,33 +324,39 @@ def filter_rows(state: Optional[str] = None,
             sc = 0
         if sc < min_score:
             continue
+        if not _domain_passes(row):
+            continue
         yield row
 
 
-def write_filtered_csv(path: str, **filters) -> int:
-    """Write the filtered rows to a CSV at `path`. Returns row count.
+def write_filtered_csv(path: str, include_enrichment_columns: bool = True, **filters) -> int:
+    """Write filtered rows to a CSV at `path`. Returns row count.
 
-    Joins DOMAIN_INFO columns (domain_age_years, registrar, mx_provider) onto
-    each row when the lead's website domain has been enriched. Missing values
-    come out as empty strings.
+    When `include_enrichment_columns=True` (default), adds domain/registrar/age/mx
+    columns from DOMAIN_INFO. /db_export uses this for inspection.
+    When False, the output schema is exactly `scraper.COLUMNAS_CSV` — the path
+    /db_export_smartlead takes, since Smartlead only needs the standard fields.
     """
     from bot.domain_enricher import extract_domain
     rows = list(filter_rows(**filters))
-    # Output columns = master columns + the domain enrichment columns
-    extra_cols = ["domain", "domain_age_years", "registrar", "mx_provider"]
-    output_cols = list(scraper_mod.COLUMNAS_CSV) + extra_cols
+    if include_enrichment_columns:
+        extra_cols = ["domain", "domain_age_years", "registrar", "mx_provider"]
+        output_cols = list(scraper_mod.COLUMNAS_CSV) + extra_cols
+    else:
+        output_cols = list(scraper_mod.COLUMNAS_CSV)
     with open(path, "w", encoding="utf-8", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=output_cols, extrasaction="ignore")
         writer.writeheader()
         for row in rows:
-            domain = extract_domain(row.get("website", ""))
-            info = DOMAIN_INFO.get(domain, {}) if domain else {}
-            enriched = dict(row)
-            enriched["domain"] = domain
-            enriched["domain_age_years"] = info.get("domain_age_years", "")
-            enriched["registrar"] = info.get("registrar", "")
-            enriched["mx_provider"] = info.get("mx_provider", "")
-            writer.writerow(enriched)
+            out = dict(row)
+            if include_enrichment_columns:
+                domain = extract_domain(row.get("website", ""))
+                info = DOMAIN_INFO.get(domain, {}) if domain else {}
+                out["domain"] = domain
+                out["domain_age_years"] = info.get("domain_age_years", "")
+                out["registrar"] = info.get("registrar", "")
+                out["mx_provider"] = info.get("mx_provider", "")
+            writer.writerow(out)
     return len(rows)
 
 
